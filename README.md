@@ -89,8 +89,10 @@ Contributions are welcome! To contribute:
 3. **Make Your Changes and Commit:**
 
    ```bash
-   git commit -m "Add new feature"
+   git commit -m "feat: Add new feature"
    ```
+
+   Recomendation: Use [Conventional commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
 4. **Push to Your Fork:**
 
