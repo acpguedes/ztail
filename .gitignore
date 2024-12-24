@@ -1,3 +1,4 @@
-ztail
-ztail_lz4
-ztail_zstd
+build
+build/*
+_old
+_old/*
