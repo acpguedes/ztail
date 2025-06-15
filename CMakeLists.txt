@@ -25,11 +25,11 @@ endif()
 add_compile_options(
     -O3
     -march=native
-    -flto
     -pipe
 )
 
 if(ipo_supported)
+    add_compile_options(-flto)
     add_link_options(
         -flto
     )
