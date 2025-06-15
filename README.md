@@ -17,6 +17,14 @@
 - **zlib Library:** For decompressing `.gz` and `.bgz` files.
 - **libzip Library:** For handling `.zip` files.
 
+On Ubuntu/Debian the required packages can typically be installed with:
+
+```bash
+sudo apt install zlib1g-dev libbz2-dev libzip-dev
+```
+
+Library names may vary on other operating systems.
+
 ### 🔧 **Build Steps**
 
 1. **Clone the Repository:**
