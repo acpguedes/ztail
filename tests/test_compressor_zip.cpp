@@ -24,7 +24,7 @@ TEST(CompressorZipTest, DecompressValidFile) {
 
     create_zip_file(filename, content);
 
-    CompressorZip compressor(filename);
+    CompressorZip compressor(filename, "test.txt");
     std::vector<char> buffer(1024);
     size_t bytesDecompressed = 0;
 

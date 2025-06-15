@@ -55,6 +55,7 @@ endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED libzip)
 pkg_check_modules(LIBLZMA REQUIRED liblzma)
+pkg_check_modules(LIBZSTD REQUIRED libzstd)
 
 if(LIBZIP_FOUND)
     message(STATUS "LibZip found: ${LIBZIP_INCLUDE_DIRS}")
@@ -66,6 +67,11 @@ if(LIBLZMA_FOUND)
 else()
     message(FATAL_ERROR "LibLZMA not found!")
 endif()
+if(LIBZSTD_FOUND)
+    message(STATUS "LibZSTD found: ${LIBZSTD_INCLUDE_DIRS}")
+else()
+    message(FATAL_ERROR "LibZSTD not found!")
+endif()
 
 # Include Directories
 include_directories(
@@ -73,6 +79,7 @@ include_directories(
     ${LIBZIP_INCLUDE_DIRS}
     ${BZIP2_INCLUDE_DIRS}
     ${LIBLZMA_INCLUDE_DIRS}
+    ${LIBZSTD_INCLUDE_DIRS}
     src
 )
 
@@ -87,6 +94,9 @@ set(ZTAIL_LIB_SOURCES
     src/compressor_bzip2.cpp
     src/compressor_xz.cpp
     src/compressor_zip.cpp
+    src/compressor_zstd.cpp
+    src/compression_type.cpp
+    src/tail_plain.cpp
     src/parser.cpp
 )
 
@@ -98,6 +108,7 @@ target_link_libraries(ztail_lib
         ${BZIP2_LIBRARIES}
         ${LIBLZMA_LIBRARIES}
         ${LIBZIP_LIBRARIES}
+        ${LIBZSTD_LIBRARIES}
 )
 target_include_directories(ztail_lib PUBLIC src)
 
@@ -123,6 +134,7 @@ if(BUILD_TESTING)
         tests/test_compressor_bzip2.cpp
         tests/test_compressor_xz.cpp
         tests/test_compressor_zip.cpp
+        tests/test_compressor_zstd.cpp
         tests/test_parser.cpp
         tests/test_detection.cpp
         src/main.cpp
@@ -133,3 +145,5 @@ if(BUILD_TESTING)
     include(GoogleTest)
     gtest_discover_tests(ztail_tests)
 endif()
+
+install(TARGETS ztail DESTINATION bin)

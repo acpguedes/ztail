@@ -8,10 +8,11 @@ enum class CompressionType {
     GZIP,
     BZIP2,
     XZ,
-    ZIP
+    ZIP,
+    ZSTD
 };
 
 CompressionType detectCompressionType(const std::string& filename);
-CompressionType detect_type(const std::string& filename);
+
 
 #endif // COMPRESSION_TYPE_H

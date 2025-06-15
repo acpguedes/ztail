@@ -2,10 +2,12 @@
 #define CLI_H
 
 #include <string>
+#include <vector>
 
 struct CLIOptions {
     int n = 10;             // Number of lines to print (default = 10)
-    std::string filename;   // Name of the file (empty if reading from stdin)
+    std::vector<std::string> filenames;   // Names of files to process
+    std::string zipEntry;   // Optional entry name for zip files
 };
 
 class CLI {

@@ -6,6 +6,7 @@
 #include <bzlib.h>
 #include <zip.h>
 #include <lzma.h>
+#include <zstd.h>
 
 static void create_gz(const std::string& fname, const std::string& data){
     gzFile gz = gzopen(fname.c_str(), "wb");
@@ -40,21 +41,21 @@ static void create_zip(const std::string& fname, const std::string& data){
 TEST(CompressionDetection, GzipWrongExtension){
     const std::string fname = "sample.txt";
     create_gz(fname, "a\n");
-    EXPECT_EQ(detect_type(fname), CompressionType::GZIP);
+    EXPECT_EQ(detectCompressionType(fname), CompressionType::GZIP);
     std::remove(fname.c_str());
 }
 
 TEST(CompressionDetection, Bzip2NoExtension){
     const std::string fname = "sample";
     create_bz2(fname, "b\n");
-    EXPECT_EQ(detect_type(fname), CompressionType::BZIP2);
+    EXPECT_EQ(detectCompressionType(fname), CompressionType::BZIP2);
     std::remove(fname.c_str());
 }
 
 TEST(CompressionDetection, ZipMisleadingExtension){
     const std::string fname = "archive.gz";
     create_zip(fname, "c\n");
-    EXPECT_EQ(detect_type(fname), CompressionType::ZIP);
+    EXPECT_EQ(detectCompressionType(fname), CompressionType::ZIP);
     std::remove(fname.c_str());
 }
 
@@ -70,10 +71,26 @@ static void create_xz(const std::string& fname, const std::string& data){
     ofs.write(reinterpret_cast<char*>(out.data()), out_pos);
 }
 
+static void create_zst(const std::string& fname, const std::string& data){
+    size_t const cBuffSize = ZSTD_compressBound(data.size());
+    std::vector<char> cBuff(cBuffSize);
+    size_t cSize = ZSTD_compress(cBuff.data(), cBuffSize, data.data(), data.size(), 1);
+    ASSERT_FALSE(ZSTD_isError(cSize));
+    std::ofstream ofs(fname, std::ios::binary);
+    ofs.write(cBuff.data(), cSize);
+}
+
 TEST(CompressionDetection, XzNoExtension){
     const std::string fname = "archive";
     create_xz(fname, "d\n");
-    EXPECT_EQ(detect_type(fname), CompressionType::XZ);
+    EXPECT_EQ(detectCompressionType(fname), CompressionType::XZ);
+    std::remove(fname.c_str());
+}
+
+TEST(CompressionDetection, ZstdNoExtension){
+    const std::string fname = "compressed";
+    create_zst(fname, "e\n");
+    EXPECT_EQ(detectCompressionType(fname), CompressionType::ZSTD);
     std::remove(fname.c_str());
 }
 
@@ -82,7 +99,7 @@ TEST(CompressionDetection, PlaintextFile){
     std::ofstream ofs(fname);
     ofs << "hello\n";
     ofs.close();
-    EXPECT_EQ(detect_type(fname), CompressionType::NONE);
+    EXPECT_EQ(detectCompressionType(fname), CompressionType::NONE);
     std::remove(fname.c_str());
 }
 
