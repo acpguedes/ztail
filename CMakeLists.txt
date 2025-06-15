@@ -43,6 +43,14 @@ else()
     message(FATAL_ERROR "ZLIB not found!")
 endif()
 
+# Find BZip2
+find_package(BZip2 REQUIRED)
+if(BZIP2_FOUND)
+    message(STATUS "BZip2 found: ${BZIP2_INCLUDE_DIRS}")
+else()
+    message(FATAL_ERROR "BZip2 not found!")
+endif()
+
 # Find LibZip
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED libzip)
@@ -57,6 +65,7 @@ endif()
 include_directories(
     ${ZLIB_INCLUDE_DIRS}
     ${LIBZIP_INCLUDE_DIRS}
+    ${BZIP2_INCLUDE_DIRS}
     src
 )
 
@@ -68,6 +77,7 @@ set(ZTAIL_LIB_SOURCES
     src/circular_buffer.cpp
     src/cli.cpp
     src/compressor_zlib.cpp
+    src/compressor_bzip2.cpp
     src/compressor_zip.cpp
     src/parser.cpp
 )
@@ -77,6 +87,7 @@ add_library(ztail_lib ${ZTAIL_LIB_SOURCES})
 target_link_libraries(ztail_lib
     PUBLIC
         ${ZLIB_LIBRARIES}
+        ${BZIP2_LIBRARIES}
         ${LIBZIP_LIBRARIES}
 )
 target_include_directories(ztail_lib PUBLIC src)
@@ -100,6 +111,7 @@ if(BUILD_TESTING)
     add_executable(ztail_tests
         tests/test_circular_buffer.cpp
         tests/test_compressor_zlib.cpp
+        tests/test_compressor_bzip2.cpp
         tests/test_compressor_zip.cpp
         tests/test_parser.cpp
     )
