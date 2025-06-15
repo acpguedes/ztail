@@ -60,9 +60,11 @@ include_directories(
     src
 )
 
+# Enable testing infrastructure
+include(CTest)
+
 # Source Files
-set(SOURCES
-    src/main.cpp
+set(ZTAIL_LIB_SOURCES
     src/circular_buffer.cpp
     src/cli.cpp
     src/compressor_zlib.cpp
@@ -70,12 +72,39 @@ set(SOURCES
     src/parser.cpp
 )
 
-# Executable
-add_executable(ztail ${SOURCES})
-
-# Link Libraries
-target_link_libraries(ztail
-    PRIVATE
+# Build library with core functionality
+add_library(ztail_lib ${ZTAIL_LIB_SOURCES})
+target_link_libraries(ztail_lib
+    PUBLIC
         ${ZLIB_LIBRARIES}
         ${LIBZIP_LIBRARIES}
 )
+target_include_directories(ztail_lib PUBLIC src)
+
+# Executable
+add_executable(ztail src/main.cpp)
+target_link_libraries(ztail PRIVATE ztail_lib)
+
+# ------------------------------------------------------------------------------
+# Tests
+if(BUILD_TESTING)
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
+    )
+    FetchContent_MakeAvailable(googletest)
+
+    enable_testing()
+
+    add_executable(ztail_tests
+        tests/test_circular_buffer.cpp
+        tests/test_compressor_zlib.cpp
+        tests/test_compressor_zip.cpp
+        tests/test_parser.cpp
+    )
+    target_link_libraries(ztail_tests PRIVATE gtest_main ztail_lib)
+
+    include(GoogleTest)
+    gtest_discover_tests(ztail_tests)
+endif()
