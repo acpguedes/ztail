@@ -17,13 +17,14 @@
 - **CMake** (version 3.10 or higher).
 - **zlib Library:** For decompressing `.gz` and `.bgz` files.
 - **bzip2 Library:** For handling `.bz2` files.
-- **liblzma Library:** For handling `.xz` files.
-- **libzip Library:** For handling `.zip` files.
+ - **liblzma Library:** For handling `.xz` files.
+ - **libzstd Library:** For handling `.zst` files.
+ - **libzip Library:** For handling `.zip` files.
 
 On Ubuntu/Debian the required packages can typically be installed with:
 
 ```bash
-sudo apt install zlib1g-dev libbz2-dev liblzma-dev libzip-dev
+sudo apt install zlib1g-dev libbz2-dev liblzma-dev libzstd-dev libzip-dev
 ```
 
 Library names may vary on other operating systems.
