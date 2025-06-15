@@ -5,153 +5,75 @@
 #include "compressor_zip.h"
 #include "compressor_bzip2.h"
 #include "compressor_xz.h"
+#include "compressor_zstd.h"
 #include "compression_type.h"
+#include "tail_plain.h"
 
 #include <iostream>
 #include <stdexcept>
 #include <cstdio>      // for fread
 #include <vector>
 #include <cstdlib>     // for EXIT_SUCCESS/EXIT_FAILURE
-#include <fstream>
-
-// Detect the compression type by inspecting the file's magic bytes
-CompressionType detectCompressionType(const std::string& filename) {
-    std::ifstream file(filename, std::ios::binary);
-    if (!file) {
-        return CompressionType::NONE;
-    }
-
-    unsigned char bytes[6] = {0};
-    file.read(reinterpret_cast<char*>(bytes), sizeof(bytes));
-    std::size_t read = static_cast<std::size_t>(file.gcount());
-
-    if (read >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b) {
-        return CompressionType::GZIP;      // gzip or bgz
-    }
-    if (read >= 3 && bytes[0] == 'B' && bytes[1] == 'Z' && bytes[2] == 'h') {
-        return CompressionType::BZIP2;     // bzip2
-    }
-    if (read >= 6 && bytes[0] == 0xFD && bytes[1] == 0x37 && bytes[2] == 0x7A &&
-        bytes[3] == 0x58 && bytes[4] == 0x5A && bytes[5] == 0x00) {
-        return CompressionType::XZ;        // xz
-    }
-    if (read >= 4 && bytes[0] == 0x50 && bytes[1] == 0x4B &&
-        (bytes[2] == 0x03 || bytes[2] == 0x05 || bytes[2] == 0x07) &&
-        (bytes[3] == 0x04 || bytes[3] == 0x06 || bytes[3] == 0x08)) {
-        return CompressionType::ZIP;       // zip
-    }
-
-    return CompressionType::NONE;
-}
-
-CompressionType detect_type(const std::string& filename) {
-    return detectCompressionType(filename);
-}
 
 static const size_t READ_BUFFER_SIZE = 1 << 20; // 1MB
 
 #ifndef ZTAIL_NO_MAIN
 int main(int argc, char* argv[]) {
-    // Parse command-line arguments
-    CLIOptions options = CLI::parse(argc, argv);
-
-    // Create a circular buffer that holds up to N lines
-    CircularBuffer cb(options.n);
-
     try {
-        // If a filename was provided, open that file
-        if (!options.filename.empty()) {
-            std::string filename = options.filename;
+        CLIOptions options = CLI::parse(argc, argv);
 
-            bool isGz  = false;
-            bool isBgz = false;
-            bool isBz2 = false;
-            bool isZip = false;
-            bool isXz  = false;
+        if (!options.filenames.empty()) {
+            for (const auto& filename : options.filenames) {
+                CircularBuffer cb(options.n);
+                Parser parser(cb);
+                std::vector<char> buffer(READ_BUFFER_SIZE);
+                size_t bytesDecompressed = 0;
 
-            // Detect compression by magic bytes
-            CompressionType ctype = detect_type(filename);
-            if (ctype == CompressionType::GZIP) {
-                isGz = true;
-            }
-            else if (ctype == CompressionType::BZIP2) {
-                isBz2 = true;
-            }
-            else if (ctype == CompressionType::ZIP) {
-                isZip = true;
-            }
-            else if (ctype == CompressionType::XZ) {
-                isXz = true;
-            }
+                CompressionType type = detectCompressionType(filename);
 
-            // Fallback: detect by file extension if needed
-            if (ctype == CompressionType::NONE) {
-                if (filename.size() >= 3 &&
-                    (filename.compare(filename.size() - 3, 3, ".gz") == 0)) {
-                    isGz = true;
+                if (type == CompressionType::GZIP) {
+                    CompressorZlib comp(filename);
+                    while (comp.decompress(buffer, bytesDecompressed)) {
+                        if (bytesDecompressed)
+                            parser.parse(buffer.data(), bytesDecompressed);
+                    }
+                    parser.finalize();
+                } else if (type == CompressionType::BZIP2) {
+                    CompressorBzip2 comp(filename);
+                    while (comp.decompress(buffer, bytesDecompressed)) {
+                        if (bytesDecompressed)
+                            parser.parse(buffer.data(), bytesDecompressed);
+                    }
+                    parser.finalize();
+                } else if (type == CompressionType::XZ) {
+                    CompressorXz comp(filename);
+                    while (comp.decompress(buffer, bytesDecompressed)) {
+                        if (bytesDecompressed)
+                            parser.parse(buffer.data(), bytesDecompressed);
+                    }
+                    parser.finalize();
+                } else if (type == CompressionType::ZIP) {
+                    CompressorZip comp(filename, options.zipEntry);
+                    while (comp.decompress(buffer, bytesDecompressed)) {
+                        if (bytesDecompressed)
+                            parser.parse(buffer.data(), bytesDecompressed);
+                    }
+                    parser.finalize();
+                } else if (type == CompressionType::ZSTD) {
+                    CompressorZstd comp(filename);
+                    while (comp.decompress(buffer, bytesDecompressed)) {
+                        if (bytesDecompressed)
+                            parser.parse(buffer.data(), bytesDecompressed);
+                    }
+                    parser.finalize();
+                } else {
+                    tailPlainFile(filename, parser, options.n, READ_BUFFER_SIZE);
                 }
-                else if (filename.size() >= 4 &&
-                         (filename.compare(filename.size() - 4, 4, ".bgz") == 0)) {
-                    isBgz = true;
-                }
-                else if (filename.size() >= 4 &&
-                         (filename.compare(filename.size() - 4, 4, ".zip") == 0)) {
-                    isZip = true;
-                }
-                else if (filename.size() >= 4 &&
-                         (filename.compare(filename.size() - 4, 4, ".bz2") == 0)) {
-                    isBz2 = true;
-                }
-                else if (filename.size() >= 3 &&
-                         (filename.compare(filename.size() - 3, 3, ".xz") == 0)) {
-                    isXz = true;
-                }
-                else {
-                    std::cerr << "Unrecognized extension in \"" << filename
-                              << "\". Only .gz, .bgz, .bz2, .xz, and .zip are supported.\n";
-                    return EXIT_FAILURE;
-                }
-            }
 
-            Parser parser(cb);
-            std::vector<char> decompressedBuffer(READ_BUFFER_SIZE);
-            size_t bytesDecompressed = 0;
-
-            if (isGz || isBgz) {
-                CompressorZlib compressor(filename);
-                while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
-                    if (bytesDecompressed > 0)
-                        parser.parse(decompressedBuffer.data(), bytesDecompressed);
-                }
-                parser.finalize();
+                cb.print();
             }
-            else if (isBz2) {
-                CompressorBzip2 compressor(filename);
-                while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
-                    if (bytesDecompressed > 0)
-                        parser.parse(decompressedBuffer.data(), bytesDecompressed);
-                }
-                parser.finalize();
-            }
-            else if (isXz) {
-                CompressorXz compressor(filename);
-                while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
-                    if (bytesDecompressed > 0)
-                        parser.parse(decompressedBuffer.data(), bytesDecompressed);
-                }
-                parser.finalize();
-            }
-            else if (isZip) {
-                CompressorZip compressor(filename);
-                while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
-                    if (bytesDecompressed > 0)
-                        parser.parse(decompressedBuffer.data(), bytesDecompressed);
-                }
-                parser.finalize();
-            }
-        } 
-        else {
-            // Read from stdin
+        } else {
+            CircularBuffer cb(options.n);
             Parser parser(cb);
             std::vector<char> buffer(READ_BUFFER_SIZE);
             while (true) {
@@ -160,15 +82,12 @@ int main(int argc, char* argv[]) {
                 parser.parse(buffer.data(), bytesRead);
             }
             parser.finalize();
+            cb.print();
         }
-    }
-    catch (const std::exception& ex) {
+    } catch (const std::exception& ex) {
         std::cerr << "ERROR: " << ex.what() << std::endl;
         return EXIT_FAILURE;
     }
-
-    // Output last N lines
-    cb.print();
 
     return EXIT_SUCCESS;
 }

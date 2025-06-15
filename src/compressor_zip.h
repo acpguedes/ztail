@@ -8,7 +8,7 @@
 
 class CompressorZip {
 public:
-    explicit CompressorZip(const std::string& filename);
+    explicit CompressorZip(const std::string& filename, const std::string& entry = "");
     ~CompressorZip();
 
     // Reads the next chunk of decompressed data
@@ -18,6 +18,7 @@ public:
 private:
     zip_t* za;
     zip_file_t* zf;
+    std::string entry;
     bool eof;
 };
 

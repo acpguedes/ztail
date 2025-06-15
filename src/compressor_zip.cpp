@@ -1,7 +1,7 @@
 #include "compressor_zip.h"
 
-CompressorZip::CompressorZip(const std::string& filename)
-    : za(nullptr), zf(nullptr), eof(false)
+CompressorZip::CompressorZip(const std::string& filename, const std::string& entryName)
+    : za(nullptr), zf(nullptr), entry(entryName), eof(false)
 {
     int zipError = 0;
     za = zip_open(filename.c_str(), ZIP_RDONLY, &zipError);
@@ -15,11 +15,18 @@ CompressorZip::CompressorZip(const std::string& filename)
         throw std::runtime_error("Empty zip file: " + filename);
     }
 
-    // We only open the first file in the zip archive
-    zf = zip_fopen_index(za, 0, 0);
-    if (!zf) {
-        zip_close(za);
-        throw std::runtime_error("Failed to open the first file in zip: " + filename);
+    if (!entry.empty()) {
+        zf = zip_fopen(za, entry.c_str(), 0);
+        if (!zf) {
+            zip_close(za);
+            throw std::runtime_error("Failed to open entry " + entry + " in zip: " + filename);
+        }
+    } else {
+        zf = zip_fopen_index(za, 0, 0);
+        if (!zf) {
+            zip_close(za);
+            throw std::runtime_error("Failed to open the first file in zip: " + filename);
+        }
     }
 }
 
