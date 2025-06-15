@@ -8,8 +8,9 @@
 void CLI::usage(const char* progName) {
     std::cerr
         << "Usage: " << progName << " [-n N] <file.gz | file.bgz | file.bz2 | file.zip>\n"
-        << "       " << progName << " [-n N]\n"
-        << "  -n N : print the last N lines (default = 10)\n"
+        << "       " << progName << " [-n N] [--entry name]\n"
+        << "  -n N       : print the last N lines (default = 10)\n"
+        << "  --entry nm : read the specified entry from a zip archive\n"
         << "  If no file is provided, the program reads from stdin.\n";
 }
 
@@ -39,6 +40,15 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
                 i++;
             } else {
                 std::cerr << "Error: -n requires a number.\n";
+                usage(argv[0]);
+                exit(EXIT_FAILURE);
+            }
+        } else if (std::strcmp(argv[i], "--entry") == 0) {
+            if (i + 1 < argc) {
+                options.zip_entry = argv[i + 1];
+                i++;
+            } else {
+                std::cerr << "Error: --entry requires a name.\n";
                 usage(argv[0]);
                 exit(EXIT_FAILURE);
             }

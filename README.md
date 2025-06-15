@@ -63,10 +63,11 @@ Library names may vary on other operating systems.
 ```bash
 ./ztail -n 2 file.gz
 ./ztail -n 2 file.bz2
-./ztail -n 2 file.zip
+./ztail -n 2 --entry second.txt file.zip
 ```
 
 - **`-n N`**: Display the last N lines (default = 10).
+- **`--entry name`**: For zip files, read `name` instead of the first entry.
 - **`file.gz`, `file.bz2`, or `file.zip`**: Name of the compressed file.
 
 ## 🧪 **Tests**

@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
             }
             else if (isZip) {
                 // Use libzip
-                CompressorZip compressor(filename);
+                CompressorZip compressor(filename, options.zip_entry);
 
                 while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
                     if (bytesDecompressed > 0) {
