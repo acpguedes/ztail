@@ -1,10 +1,10 @@
 # ztail
 
-**ztail** is an efficient command-line tool to display the last N lines of compressed `.gz`, `.bz2`, `.xz`, and `.zip` files. Designed for high performance, **ztail** is ideal for working with large compressed text files.
+**ztail** is an efficient command-line tool to display the last N lines of compressed `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, and `.zst` files. Designed for high performance, **ztail** is ideal for working with large compressed text files.
 
 ## 🛠️ **Features**
 
-- **Supports `.gz`, `.bz2`, `.xz`, and `.zip` Files:** Decompresses and processes these compressed file formats efficiently.
+- **Supports `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, and `.zst` Files:** Decompresses and processes these compressed file formats efficiently.
 - **Automatic Detection:** Compression type is identified from file contents even when the extension is missing or wrong.
 - **High Performance:** Optimized for large files, avoiding unnecessary full decompressions.
 - **Intuitive Command-Line Interface:** Simple usage with flexible options.
@@ -61,17 +61,22 @@ Library names may vary on other operating systems.
 
 ## 🚀 **Usage**
 
-### **Display the Last N Lines of a `.gz`, `.bz2`, `.xz`, or `.zip` File**
+### **Display the Last N Lines of `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, or `.zst` Files**
 
 ```bash
 ./ztail -n 2 file.gz
+./ztail -n 2 file.bgz
 ./ztail -n 2 file.bz2
 ./ztail -n 2 file.xz
 ./ztail -n 2 file.zip
+./ztail -n 2 file.zst
+./ztail -e entry.txt archive.zip
 ```
 
 - **`-n N`**: Display the last N lines (default = 10).
-- **`file.gz`, `file.bz2`, `file.xz`, or `file.zip`**: Name of the compressed file. The extension may be omitted because compression type is detected automatically.
+- **`file.gz`, `file.bgz`, `file.bz2`, `file.xz`, `file.zip`, or `file.zst`**: Name of the compressed file. The extension may be omitted because compression type is detected automatically.
+- **`-e <name>`**: When reading a `.zip` file, select an entry inside the archive.
+- If no file is provided, **ztail** reads from standard input.
 
 ## 🧪 **Tests**
 
