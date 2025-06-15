@@ -44,6 +44,10 @@ CompressionType detectCompressionType(const std::string& filename) {
     return CompressionType::NONE;
 }
 
+CompressionType detect_type(const std::string& filename) {
+    return detectCompressionType(filename);
+}
+
 static const size_t READ_BUFFER_SIZE = 1 << 20; // 1MB
 
 #ifndef ZTAIL_NO_MAIN
@@ -66,7 +70,7 @@ int main(int argc, char* argv[]) {
             bool isXz  = false;
 
             // Detect compression by magic bytes
-            CompressionType ctype = detectCompressionType(filename);
+            CompressionType ctype = detect_type(filename);
             if (ctype == CompressionType::GZIP) {
                 isGz = true;
             }

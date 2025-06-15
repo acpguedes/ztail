@@ -5,6 +5,7 @@
 #include <zlib.h>
 #include <bzlib.h>
 #include <zip.h>
+#include <lzma.h>
 
 static void create_gz(const std::string& fname, const std::string& data){
     gzFile gz = gzopen(fname.c_str(), "wb");
@@ -39,21 +40,49 @@ static void create_zip(const std::string& fname, const std::string& data){
 TEST(CompressionDetection, GzipWrongExtension){
     const std::string fname = "sample.txt";
     create_gz(fname, "a\n");
-    EXPECT_EQ(detectCompressionType(fname), CompressionType::GZIP);
+    EXPECT_EQ(detect_type(fname), CompressionType::GZIP);
     std::remove(fname.c_str());
 }
 
 TEST(CompressionDetection, Bzip2NoExtension){
     const std::string fname = "sample";
     create_bz2(fname, "b\n");
-    EXPECT_EQ(detectCompressionType(fname), CompressionType::BZIP2);
+    EXPECT_EQ(detect_type(fname), CompressionType::BZIP2);
     std::remove(fname.c_str());
 }
 
 TEST(CompressionDetection, ZipMisleadingExtension){
     const std::string fname = "archive.gz";
     create_zip(fname, "c\n");
-    EXPECT_EQ(detectCompressionType(fname), CompressionType::ZIP);
+    EXPECT_EQ(detect_type(fname), CompressionType::ZIP);
+    std::remove(fname.c_str());
+}
+
+static void create_xz(const std::string& fname, const std::string& data){
+    size_t out_pos = 0;
+    size_t out_size = lzma_stream_buffer_bound(data.size());
+    std::vector<uint8_t> out(out_size);
+    lzma_ret ret = lzma_easy_buffer_encode(6, LZMA_CHECK_CRC64, nullptr,
+                                           reinterpret_cast<const uint8_t*>(data.data()),
+                                           data.size(), out.data(), &out_pos, out_size);
+    ASSERT_EQ(ret, LZMA_OK);
+    std::ofstream ofs(fname, std::ios::binary);
+    ofs.write(reinterpret_cast<char*>(out.data()), out_pos);
+}
+
+TEST(CompressionDetection, XzNoExtension){
+    const std::string fname = "archive";
+    create_xz(fname, "d\n");
+    EXPECT_EQ(detect_type(fname), CompressionType::XZ);
+    std::remove(fname.c_str());
+}
+
+TEST(CompressionDetection, PlaintextFile){
+    const std::string fname = "plain.txt";
+    std::ofstream ofs(fname);
+    ofs << "hello\n";
+    ofs.close();
+    EXPECT_EQ(detect_type(fname), CompressionType::NONE);
     std::remove(fname.c_str());
 }
 
