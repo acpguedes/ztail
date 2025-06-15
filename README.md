@@ -1,6 +1,6 @@
 # ztail
 
-**ztail** is an efficient command-line tool to display the last N lines of compressed `.gz`, `.bz2`, and `.zip` files. Designed for high performance, **ztail** is ideal for working with large compressed text files.
+**ztail** is an efficient command-line tool to display the last N lines of compressed `.gz`, `.bz2`, `.xz`, and `.zip` files. Designed for high performance, **ztail** is ideal for working with large compressed text files.
 
 ## 🛠️ **Features**
 
@@ -17,12 +17,13 @@
 - **CMake** (version 3.10 or higher).
 - **zlib Library:** For decompressing `.gz` and `.bgz` files.
 - **bzip2 Library:** For handling `.bz2` files.
+- **liblzma Library:** For handling `.xz` files.
 - **libzip Library:** For handling `.zip` files.
 
 On Ubuntu/Debian the required packages can typically be installed with:
 
 ```bash
-sudo apt install zlib1g-dev libbz2-dev libzip-dev
+sudo apt install zlib1g-dev libbz2-dev liblzma-dev libzip-dev
 ```
 
 Library names may vary on other operating systems.
@@ -59,16 +60,17 @@ Library names may vary on other operating systems.
 
 ## 🚀 **Usage**
 
-### **Display the Last N Lines of a `.gz`, `.bz2`, or `.zip` File**
+### **Display the Last N Lines of a `.gz`, `.bz2`, `.xz`, or `.zip` File**
 
 ```bash
 ./ztail -n 2 file.gz
 ./ztail -n 2 file.bz2
+./ztail -n 2 file.xz
 ./ztail -n 2 file.zip
 ```
 
 - **`-n N`**: Display the last N lines (default = 10).
-- **`file.gz`, `file.bz2`, or `file.zip`**: Name of the compressed file. The extension may be omitted as the compression type is detected automatically.
+- **`file.gz`, `file.bz2`, `file.xz`, or `file.zip`**: Name of the compressed file.
 
 ## 🧪 **Tests**
 

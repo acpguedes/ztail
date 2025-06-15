@@ -7,7 +7,7 @@
 
 void CLI::usage(const char* progName) {
     std::cerr
-        << "Usage: " << progName << " [-n N] <file.gz | file.bgz | file.bz2 | file.zip>\n"
+        << "Usage: " << progName << " [-n N] <file.gz | file.bgz | file.bz2 | file.xz | file.zip>\n"
         << "       " << progName << " [-n N]\n"
         << "  -n N : print the last N lines (default = 10)\n"
         << "  If no file is provided, the program reads from stdin.\n";

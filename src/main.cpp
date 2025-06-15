@@ -4,6 +4,7 @@
 #include "compressor_zlib.h"
 #include "compressor_zip.h"
 #include "compressor_bzip2.h"
+#include "compressor_xz.h"
 #include "compression_type.h"
 
 #include <iostream>
@@ -64,7 +65,7 @@ int main(int argc, char* argv[]) {
             bool isZip = false;
             bool isXz  = false;
 
-            // First attempt to detect by magic bytes
+            // Detect compression by magic bytes
             CompressionType ctype = detectCompressionType(filename);
             if (ctype == CompressionType::GZIP) {
                 isGz = true;
@@ -79,7 +80,7 @@ int main(int argc, char* argv[]) {
                 isXz = true;
             }
 
-            // Fallback to extension check if detection failed
+            // Fallback: detect by file extension if needed
             if (ctype == CompressionType::NONE) {
                 if (filename.size() >= 3 &&
                     (filename.compare(filename.size() - 3, 3, ".gz") == 0)) {
@@ -97,16 +98,15 @@ int main(int argc, char* argv[]) {
                          (filename.compare(filename.size() - 4, 4, ".bz2") == 0)) {
                     isBz2 = true;
                 }
+                else if (filename.size() >= 3 &&
+                         (filename.compare(filename.size() - 3, 3, ".xz") == 0)) {
+                    isXz = true;
+                }
                 else {
                     std::cerr << "Unrecognized extension in \"" << filename
-                              << "\". Only .gz, .bgz, .bz2, and .zip are supported.\n";
+                              << "\". Only .gz, .bgz, .bz2, .xz, and .zip are supported.\n";
                     return EXIT_FAILURE;
                 }
-            }
-
-            if (isXz) {
-                std::cerr << "Compression type xz is not supported: " << filename << "\n";
-                return EXIT_FAILURE;
             }
 
             Parser parser(cb);
@@ -114,49 +114,45 @@ int main(int argc, char* argv[]) {
             size_t bytesDecompressed = 0;
 
             if (isGz || isBgz) {
-                // Use zlib
                 CompressorZlib compressor(filename);
-
                 while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
-                    if (bytesDecompressed > 0) {
+                    if (bytesDecompressed > 0)
                         parser.parse(decompressedBuffer.data(), bytesDecompressed);
-                    }
                 }
                 parser.finalize();
             }
             else if (isBz2) {
-                // Use bzip2
                 CompressorBzip2 compressor(filename);
-
                 while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
-                    if (bytesDecompressed > 0) {
+                    if (bytesDecompressed > 0)
                         parser.parse(decompressedBuffer.data(), bytesDecompressed);
-                    }
+                }
+                parser.finalize();
+            }
+            else if (isXz) {
+                CompressorXz compressor(filename);
+                while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
+                    if (bytesDecompressed > 0)
+                        parser.parse(decompressedBuffer.data(), bytesDecompressed);
                 }
                 parser.finalize();
             }
             else if (isZip) {
-                // Use libzip
                 CompressorZip compressor(filename);
-
                 while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
-                    if (bytesDecompressed > 0) {
+                    if (bytesDecompressed > 0)
                         parser.parse(decompressedBuffer.data(), bytesDecompressed);
-                    }
                 }
                 parser.finalize();
             }
         } 
         else {
-            // If no file is provided, read from stdin
+            // Read from stdin
             Parser parser(cb);
             std::vector<char> buffer(READ_BUFFER_SIZE);
-
             while (true) {
                 size_t bytesRead = std::fread(buffer.data(), 1, buffer.size(), stdin);
-                if (bytesRead == 0) {
-                    break;
-                }
+                if (bytesRead == 0) break;
                 parser.parse(buffer.data(), bytesRead);
             }
             parser.finalize();
@@ -167,7 +163,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    // Print the lines stored in the circular buffer (last N lines)
+    // Output last N lines
     cb.print();
 
     return EXIT_SUCCESS;
