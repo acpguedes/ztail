@@ -124,8 +124,11 @@ if(BUILD_TESTING)
         tests/test_compressor_xz.cpp
         tests/test_compressor_zip.cpp
         tests/test_parser.cpp
+        tests/test_detection.cpp
+        src/main.cpp
     )
     target_link_libraries(ztail_tests PRIVATE gtest_main ztail_lib)
+    target_compile_definitions(ztail_tests PRIVATE ZTAIL_NO_MAIN)
 
     include(GoogleTest)
     gtest_discover_tests(ztail_tests)

@@ -4,7 +4,8 @@
 
 ## 🛠️ **Features**
 
-- **Supports `.gz`, `.bz2`, `.xz`, and `.zip` Files:** Decompresses and processes these compressed file formats efficiently.
+- **Supports `.gz`, `.bz2`, and `.zip` Files:** Decompresses and processes these compressed file formats efficiently.
+- **Automatic Detection:** Compression type is identified from file contents even when the extension is missing or wrong.
 - **High Performance:** Optimized for large files, avoiding unnecessary full decompressions.
 - **Intuitive Command-Line Interface:** Simple usage with flexible options.
 
