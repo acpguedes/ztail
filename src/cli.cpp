@@ -2,6 +2,8 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include <cerrno>
+#include <limits>
 
 void CLI::usage(const char* progName) {
     std::cerr
@@ -24,12 +26,16 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "-n") == 0) {
             if (i + 1 < argc) {
-                options.n = std::atoi(argv[i + 1]);
-                if (options.n < 0) {
-                    std::cerr << "Error: -n requires a positive number.\n";
+                char* end = nullptr;
+                errno = 0;
+                long val = std::strtol(argv[i + 1], &end, 10);
+                if (errno != 0 || end == argv[i + 1] || *end != '\0' ||
+                    val <= 0 || val > std::numeric_limits<int>::max()) {
+                    std::cerr << "Error: -n requires a positive integer.\n";
                     usage(argv[0]);
                     exit(EXIT_FAILURE);
                 }
+                options.n = static_cast<int>(val);
                 i++;
             } else {
                 std::cerr << "Error: -n requires a number.\n";
