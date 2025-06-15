@@ -54,11 +54,17 @@ endif()
 # Find LibZip
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED libzip)
+pkg_check_modules(LIBLZMA REQUIRED liblzma)
 
 if(LIBZIP_FOUND)
     message(STATUS "LibZip found: ${LIBZIP_INCLUDE_DIRS}")
 else()
     message(FATAL_ERROR "LibZip not found!")
+endif()
+if(LIBLZMA_FOUND)
+    message(STATUS "LibLZMA found: ${LIBLZMA_INCLUDE_DIRS}")
+else()
+    message(FATAL_ERROR "LibLZMA not found!")
 endif()
 
 # Include Directories
@@ -66,6 +72,7 @@ include_directories(
     ${ZLIB_INCLUDE_DIRS}
     ${LIBZIP_INCLUDE_DIRS}
     ${BZIP2_INCLUDE_DIRS}
+    ${LIBLZMA_INCLUDE_DIRS}
     src
 )
 
@@ -78,6 +85,7 @@ set(ZTAIL_LIB_SOURCES
     src/cli.cpp
     src/compressor_zlib.cpp
     src/compressor_bzip2.cpp
+    src/compressor_xz.cpp
     src/compressor_zip.cpp
     src/parser.cpp
 )
@@ -88,6 +96,7 @@ target_link_libraries(ztail_lib
     PUBLIC
         ${ZLIB_LIBRARIES}
         ${BZIP2_LIBRARIES}
+        ${LIBLZMA_LIBRARIES}
         ${LIBZIP_LIBRARIES}
 )
 target_include_directories(ztail_lib PUBLIC src)
@@ -112,6 +121,7 @@ if(BUILD_TESTING)
         tests/test_circular_buffer.cpp
         tests/test_compressor_zlib.cpp
         tests/test_compressor_bzip2.cpp
+        tests/test_compressor_xz.cpp
         tests/test_compressor_zip.cpp
         tests/test_parser.cpp
     )

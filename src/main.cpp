@@ -4,6 +4,7 @@
 #include "compressor_zlib.h"
 #include "compressor_zip.h"
 #include "compressor_bzip2.h"
+#include "compressor_xz.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -29,6 +30,7 @@ int main(int argc, char* argv[]) {
             bool isBgz = false;
             bool isBz2 = false;
             bool isZip = false;
+            bool isXz  = false;
 
             // Check the file extension
             if (filename.size() >= 3 &&
@@ -47,9 +49,13 @@ int main(int argc, char* argv[]) {
                      (filename.compare(filename.size() - 4, 4, ".bz2") == 0)) {
                 isBz2 = true;
             }
+            else if (filename.size() >= 3 &&
+                     (filename.compare(filename.size() - 3, 3, ".xz") == 0)) {
+                isXz = true;
+            }
             else {
                 std::cerr << "Unrecognized extension in \"" << filename
-                          << "\". Only .gz, .bgz, .bz2, and .zip are supported.\n";
+                          << "\". Only .gz, .bgz, .bz2, .xz, and .zip are supported.\n";
                 return EXIT_FAILURE;
             }
 
@@ -71,6 +77,17 @@ int main(int argc, char* argv[]) {
             else if (isBz2) {
                 // Use bzip2
                 CompressorBzip2 compressor(filename);
+
+                while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
+                    if (bytesDecompressed > 0) {
+                        parser.parse(decompressedBuffer.data(), bytesDecompressed);
+                    }
+                }
+                parser.finalize();
+            }
+            else if (isXz) {
+                // Use liblzma
+                CompressorXz compressor(filename);
 
                 while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
                     if (bytesDecompressed > 0) {
