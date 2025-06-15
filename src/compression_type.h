@@ -12,5 +12,6 @@ enum class CompressionType {
 };
 
 CompressionType detectCompressionType(const std::string& filename);
+CompressionType detect_type(const std::string& filename);
 
 #endif // COMPRESSION_TYPE_H
