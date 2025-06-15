@@ -36,7 +36,7 @@
 3. **Configure the Project with CMake:**
 
    ```bash
-   cmake ..
+   cmake .. -DBUILD_TESTING=ON
    ```
 
 4. **Build the Project:**
@@ -63,13 +63,19 @@
 
 Unit tests are located in the `tests/` directory. To run them:
 
-1. **Navigate to the Build Directory:**
+1. **Ensure the project was configured with testing enabled:**
+
+   ```bash
+   cmake .. -DBUILD_TESTING=ON
+   ```
+
+2. **Navigate to the Build Directory:**
 
    ```bash
    cd build
    ```
 
-2. **Execute the Tests:**
+3. **Execute the Tests:**
 
    ```bash
    ctest --output-on-failure

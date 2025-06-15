@@ -38,10 +38,6 @@ TEST(CompressorZlibTest, DecompressInvalidFile) {
 
     EXPECT_THROW({
         CompressorZlib compressor(filename);
-        std::vector<char> buffer(1024);
-        size_t bytesDecompressed = 0;
-
-        compressor.decompress(buffer, bytesDecompressed);
     }, std::runtime_error);
 
     remove(filename.c_str());

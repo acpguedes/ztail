@@ -26,7 +26,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 
     - name: Build with Make
       run: |
