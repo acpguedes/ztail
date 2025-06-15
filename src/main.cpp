@@ -3,6 +3,7 @@
 #include "parser.h"
 #include "compressor_zlib.h"
 #include "compressor_zip.h"
+#include "compressor_bzip2.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -26,6 +27,7 @@ int main(int argc, char* argv[]) {
 
             bool isGz  = false;
             bool isBgz = false;
+            bool isBz2 = false;
             bool isZip = false;
 
             // Check the file extension
@@ -41,9 +43,13 @@ int main(int argc, char* argv[]) {
                      (filename.compare(filename.size() - 4, 4, ".zip") == 0)) {
                 isZip = true;
             }
+            else if (filename.size() >= 4 &&
+                     (filename.compare(filename.size() - 4, 4, ".bz2") == 0)) {
+                isBz2 = true;
+            }
             else {
                 std::cerr << "Unrecognized extension in \"" << filename
-                          << "\". Only .gz, .bgz, and .zip are supported.\n";
+                          << "\". Only .gz, .bgz, .bz2, and .zip are supported.\n";
                 return EXIT_FAILURE;
             }
 
@@ -54,6 +60,17 @@ int main(int argc, char* argv[]) {
             if (isGz || isBgz) {
                 // Use zlib
                 CompressorZlib compressor(filename);
+
+                while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
+                    if (bytesDecompressed > 0) {
+                        parser.parse(decompressedBuffer.data(), bytesDecompressed);
+                    }
+                }
+                parser.finalize();
+            }
+            else if (isBz2) {
+                // Use bzip2
+                CompressorBzip2 compressor(filename);
 
                 while (compressor.decompress(decompressedBuffer, bytesDecompressed)) {
                     if (bytesDecompressed > 0) {
