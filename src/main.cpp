@@ -6,6 +6,7 @@
 #include "compressor_bzip2.h"
 #include "compressor_xz.h"
 #include "compressor_zstd.h"
+#include "icompressor.h"
 #include "compression_type.h"
 #include "tail_plain.h"
 
@@ -31,37 +32,21 @@ int main(int argc, char* argv[]) {
 
                 CompressionType type = detectCompressionType(filename);
 
+                std::unique_ptr<ICompressor> comp;
                 if (type == CompressionType::GZIP) {
-                    CompressorZlib comp(filename);
-                    while (comp.decompress(buffer, bytesDecompressed)) {
-                        if (bytesDecompressed)
-                            parser.parse(buffer.data(), bytesDecompressed);
-                    }
-                    parser.finalize();
+                    comp = std::make_unique<CompressorZlib>(filename);
                 } else if (type == CompressionType::BZIP2) {
-                    CompressorBzip2 comp(filename);
-                    while (comp.decompress(buffer, bytesDecompressed)) {
-                        if (bytesDecompressed)
-                            parser.parse(buffer.data(), bytesDecompressed);
-                    }
-                    parser.finalize();
+                    comp = std::make_unique<CompressorBzip2>(filename);
                 } else if (type == CompressionType::XZ) {
-                    CompressorXz comp(filename);
-                    while (comp.decompress(buffer, bytesDecompressed)) {
-                        if (bytesDecompressed)
-                            parser.parse(buffer.data(), bytesDecompressed);
-                    }
-                    parser.finalize();
+                    comp = std::make_unique<CompressorXz>(filename);
                 } else if (type == CompressionType::ZIP) {
-                    CompressorZip comp(filename, options.zipEntry);
-                    while (comp.decompress(buffer, bytesDecompressed)) {
-                        if (bytesDecompressed)
-                            parser.parse(buffer.data(), bytesDecompressed);
-                    }
-                    parser.finalize();
+                    comp = std::make_unique<CompressorZip>(filename, options.zipEntry);
                 } else if (type == CompressionType::ZSTD) {
-                    CompressorZstd comp(filename);
-                    while (comp.decompress(buffer, bytesDecompressed)) {
+                    comp = std::make_unique<CompressorZstd>(filename);
+                }
+
+                if (comp) {
+                    while (comp->decompress(buffer, bytesDecompressed)) {
                         if (bytesDecompressed)
                             parser.parse(buffer.data(), bytesDecompressed);
                     }

@@ -2,30 +2,28 @@
 #include <fstream>
 
 CompressorXz::CompressorXz(const std::string& filename)
-    : file(nullptr), strm(LZMA_STREAM_INIT), eof(false), inBuffer(1 << 15)
+    : file(nullptr, &fclose), strm(LZMA_STREAM_INIT), eof(false), inBuffer(1 << 15)
 {
     std::ifstream check(filename, std::ios::binary);
     if (!check) {
         throw std::runtime_error("Failed to open xz file: " + filename);
     }
 
-    file = fopen(filename.c_str(), "rb");
+    file.reset(fopen(filename.c_str(), "rb"));
     if (!file) {
         throw std::runtime_error("Failed to open xz file: " + filename);
     }
 
     lzma_ret ret = lzma_stream_decoder(&strm, UINT64_MAX, 0);
     if (ret != LZMA_OK) {
-        fclose(file);
+        file.reset();
         throw std::runtime_error("Failed to initialize xz decoder");
     }
 }
 
 CompressorXz::~CompressorXz() {
     lzma_end(&strm);
-    if (file) {
-        fclose(file);
-    }
+    file.reset();
 }
 
 bool CompressorXz::decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) {
@@ -41,7 +39,7 @@ bool CompressorXz::decompress(std::vector<char>& outBuffer, size_t& bytesDecompr
 
     while (strm.avail_out > 0) {
         if (strm.avail_in == 0 && !eof) {
-            size_t nread = fread(inBuffer.data(), 1, inBuffer.size(), file);
+            size_t nread = fread(inBuffer.data(), 1, inBuffer.size(), file.get());
             if (nread == 0) {
                 eof = true;
             }

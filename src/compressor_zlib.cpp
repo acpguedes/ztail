@@ -15,15 +15,9 @@ CompressorZlib::CompressorZlib(const std::string& filename)
         throw std::runtime_error("Invalid gz/bgz file: " + filename);
     }
 
-    gz = gzopen(filename.c_str(), "rb");
+    gz.reset(gzopen(filename.c_str(), "rb"));
     if (!gz) {
         throw std::runtime_error("Failed to open gz/bgz file: " + filename);
-    }
-}
-
-CompressorZlib::~CompressorZlib() {
-    if (gz) {
-        gzclose(gz);
     }
 }
 
@@ -33,7 +27,7 @@ bool CompressorZlib::decompress(std::vector<char>& outBuffer, size_t& bytesDecom
         return false;
     }
 
-    int ret = gzread(gz, outBuffer.data(), static_cast<unsigned int>(outBuffer.size()));
+    int ret = gzread(gz.get(), outBuffer.data(), static_cast<unsigned int>(outBuffer.size()));
     if (ret < 0) {
         throw std::runtime_error("Error while decompressing gz/bgz file");
     }

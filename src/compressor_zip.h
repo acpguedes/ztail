@@ -5,19 +5,21 @@
 #include <vector>
 #include <stdexcept>
 #include <zip.h>
+#include <memory>
+#include "icompressor.h"
 
-class CompressorZip {
+class CompressorZip : public ICompressor {
 public:
     explicit CompressorZip(const std::string& filename, const std::string& entry = "");
     ~CompressorZip();
 
     // Reads the next chunk of decompressed data
     // Returns true while data is available, false on EOF
-    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed);
+    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
 
 private:
-    zip_t* za;
-    zip_file_t* zf;
+    std::unique_ptr<zip_t, decltype(&zip_close)> za;
+    std::unique_ptr<zip_file_t, decltype(&zip_fclose)> zf;
     std::string entry;
     bool eof;
 };
