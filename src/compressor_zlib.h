@@ -5,18 +5,21 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <memory>
+#include "icompressor.h"
 
-class CompressorZlib {
+struct GzCloser { void operator()(gzFile f) const { if (f) gzclose(f); } };
+
+class CompressorZlib : public ICompressor {
 public:
     explicit CompressorZlib(const std::string& filename);
-    ~CompressorZlib();
 
     // Reads the next chunk of decompressed data
     // Returns true while data is available, false on EOF
-    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed);
+    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
 
 private:
-    gzFile gz;
+    std::unique_ptr<gzFile_s, GzCloser> gz;
     bool eof;
 };
 

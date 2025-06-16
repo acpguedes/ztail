@@ -2,24 +2,24 @@
 #include <fstream>
 
 CompressorBzip2::CompressorBzip2(const std::string& filename)
-    : file(nullptr), bz(nullptr), bzerror(BZ_OK), eof(false)
+    : file(nullptr, &fclose), bz(nullptr), bzerror(BZ_OK), eof(false)
 {
     std::ifstream check(filename, std::ios::binary);
     if (!check) {
         throw std::runtime_error("Failed to open bz2 file: " + filename);
     }
 
-    file = fopen(filename.c_str(), "rb");
+    file.reset(fopen(filename.c_str(), "rb"));
     if (!file) {
         throw std::runtime_error("Failed to open bz2 file: " + filename);
     }
 
-    bz = BZ2_bzReadOpen(&bzerror, file, 0, 0, nullptr, 0);
+    bz = BZ2_bzReadOpen(&bzerror, file.get(), 0, 0, nullptr, 0);
     if (!bz || bzerror != BZ_OK) {
         if (bz) {
             BZ2_bzReadClose(&bzerror, bz);
         }
-        fclose(file);
+        file.reset();
         throw std::runtime_error("Failed to initialize bz2 decompression: " + filename);
     }
 }
@@ -28,9 +28,7 @@ CompressorBzip2::~CompressorBzip2() {
     if (bz) {
         BZ2_bzReadClose(&bzerror, bz);
     }
-    if (file) {
-        fclose(file);
-    }
+    file.reset();
 }
 
 bool CompressorBzip2::decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) {

@@ -5,17 +5,19 @@
 #include <vector>
 #include <zstd.h>
 #include <stdexcept>
+#include <memory>
+#include "icompressor.h"
 
-class CompressorZstd {
+class CompressorZstd : public ICompressor {
 public:
     explicit CompressorZstd(const std::string& filename);
     ~CompressorZstd();
 
-    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed);
+    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
 
 private:
-    FILE* file;
-    ZSTD_DStream* stream;
+    std::unique_ptr<FILE, decltype(&fclose)> file;
+    std::unique_ptr<ZSTD_DStream, decltype(&ZSTD_freeDStream)> stream;
     std::vector<char> inBuffer;
     bool eof;
 };

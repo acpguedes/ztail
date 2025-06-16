@@ -6,18 +6,20 @@
 #include <vector>
 #include <stdexcept>
 #include <cstdio>
+#include <memory>
+#include "icompressor.h"
 
-class CompressorXz {
+class CompressorXz : public ICompressor {
 public:
     explicit CompressorXz(const std::string& filename);
     ~CompressorXz();
 
     // Reads the next chunk of decompressed data
     // Returns true while data is available, false on EOF
-    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed);
+    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
 
 private:
-    FILE* file;
+    std::unique_ptr<FILE, decltype(&fclose)> file;
     lzma_stream strm;
     bool eof;
     std::vector<uint8_t> inBuffer;

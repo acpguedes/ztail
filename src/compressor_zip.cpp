@@ -1,42 +1,38 @@
 #include "compressor_zip.h"
 
 CompressorZip::CompressorZip(const std::string& filename, const std::string& entryName)
-    : za(nullptr), zf(nullptr), entry(entryName), eof(false)
+    : za(nullptr, &zip_close), zf(nullptr, &zip_fclose), entry(entryName), eof(false)
 {
     int zipError = 0;
-    za = zip_open(filename.c_str(), ZIP_RDONLY, &zipError);
+    za.reset(zip_open(filename.c_str(), ZIP_RDONLY, &zipError));
     if (!za) {
         throw std::runtime_error("Failed to open zip file: " + filename);
     }
 
-    zip_int64_t numEntries = zip_get_num_entries(za, 0);
+    zip_int64_t numEntries = zip_get_num_entries(za.get(), 0);
     if (numEntries == 0) {
-        zip_close(za);
+        za.reset();
         throw std::runtime_error("Empty zip file: " + filename);
     }
 
     if (!entry.empty()) {
-        zf = zip_fopen(za, entry.c_str(), 0);
+        zf.reset(zip_fopen(za.get(), entry.c_str(), 0));
         if (!zf) {
-            zip_close(za);
+            za.reset();
             throw std::runtime_error("Failed to open entry " + entry + " in zip: " + filename);
         }
     } else {
-        zf = zip_fopen_index(za, 0, 0);
+        zf.reset(zip_fopen_index(za.get(), 0, 0));
         if (!zf) {
-            zip_close(za);
+            za.reset();
             throw std::runtime_error("Failed to open the first file in zip: " + filename);
         }
     }
 }
 
 CompressorZip::~CompressorZip() {
-    if (zf) {
-        zip_fclose(zf);
-    }
-    if (za) {
-        zip_close(za);
-    }
+    zf.reset();
+    za.reset();
 }
 
 bool CompressorZip::decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) {
@@ -45,7 +41,7 @@ bool CompressorZip::decompress(std::vector<char>& outBuffer, size_t& bytesDecomp
         return false;
     }
 
-    zip_int64_t ret = zip_fread(zf, outBuffer.data(), outBuffer.size());
+    zip_int64_t ret = zip_fread(zf.get(), outBuffer.data(), outBuffer.size());
     if (ret < 0) {
         throw std::runtime_error("Error while reading from zip file");
     }

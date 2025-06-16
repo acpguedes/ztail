@@ -3,28 +3,28 @@
 #include <cstring>
 
 CompressorZstd::CompressorZstd(const std::string& filename)
-    : file(nullptr), stream(nullptr), inBuffer(ZSTD_DStreamInSize()), eof(false)
+    : file(nullptr, &fclose), stream(nullptr, &ZSTD_freeDStream), inBuffer(ZSTD_DStreamInSize()), eof(false)
 {
-    file = fopen(filename.c_str(), "rb");
+    file.reset(fopen(filename.c_str(), "rb"));
     if (!file) {
         throw std::runtime_error("Failed to open zst file: " + filename);
     }
-    stream = ZSTD_createDStream();
+    stream.reset(ZSTD_createDStream());
     if (!stream) {
-        fclose(file);
+        file.reset();
         throw std::runtime_error("Failed to create ZSTD stream");
     }
-    size_t ret = ZSTD_initDStream(stream);
+    size_t ret = ZSTD_initDStream(stream.get());
     if (ZSTD_isError(ret)) {
-        ZSTD_freeDStream(stream);
-        fclose(file);
+        stream.reset();
+        file.reset();
         throw std::runtime_error("Failed to init ZSTD stream");
     }
 }
 
 CompressorZstd::~CompressorZstd() {
-    if (stream) ZSTD_freeDStream(stream);
-    if (file) fclose(file);
+    stream.reset();
+    file.reset();
 }
 
 bool CompressorZstd::decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) {
@@ -38,7 +38,7 @@ bool CompressorZstd::decompress(std::vector<char>& outBuffer, size_t& bytesDecom
 
     while (out.pos < out.size) {
         if (in.pos == in.size && !eof) {
-            in.size = fread(inBuffer.data(), 1, inBuffer.size(), file);
+            in.size = fread(inBuffer.data(), 1, inBuffer.size(), file.get());
             in.pos = 0;
             if (in.size == 0) {
                 eof = true;
@@ -46,7 +46,7 @@ bool CompressorZstd::decompress(std::vector<char>& outBuffer, size_t& bytesDecom
             }
         }
 
-        size_t ret = ZSTD_decompressStream(stream, &out, &in);
+        size_t ret = ZSTD_decompressStream(stream.get(), &out, &in);
         if (ZSTD_isError(ret)) {
             throw std::runtime_error("ZSTD decompression error");
         }
