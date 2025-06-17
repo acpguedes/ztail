@@ -19,7 +19,11 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
     CLIOptions options;
 
     for (int i = 1; i < argc; ++i) {
-        if (std::strcmp(argv[i], "-n") == 0) {
+        if (std::strcmp(argv[i], "-h") == 0 || std::strcmp(argv[i], "--help") == 0) {
+            CLI::usage(argv[0]);
+            std::exit(EXIT_SUCCESS);
+        }
+        else if (std::strcmp(argv[i], "-n") == 0) {
             if (i + 1 >= argc) {
                 throw std::runtime_error("-n requires a number");
             }
