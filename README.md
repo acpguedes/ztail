@@ -139,6 +139,17 @@ This project is licensed under the [Apache License 2.0](LICENSE) - see the [LICE
 - **Error Handling:** Robust error handling to manage unexpected scenarios gracefully.
 - **Dependency Management:** Keep dependencies up-to-date to mitigate potential security risks.
 
+## 🏆 **Development Highlights**
+
+Over time **ztail** evolved through several improvements:
+
+- Modularized codebase and introduced continuous integration with tests.
+- Added bzip2 and xz support, expanding beyond gzip.
+- Implemented automatic compression detection using magic bytes.
+- Introduced an `ICompressor` interface with RAII wrappers for safe resource management.
+- Enhanced CLI validation and clarified documentation with installation instructions.
+- Updated GitHub workflows and dependencies for reliable builds.
+
 ---
 
 Feel free to reach out if you have any questions or need further assistance!
