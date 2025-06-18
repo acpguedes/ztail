@@ -71,13 +71,15 @@ Library names may vary on other operating systems.
 ./ztail -n 2 file.zip
 ./ztail -n 2 file.zst
 ./ztail -e entry.txt archive.zip
+./ztail --version
 ./ztail --help
 ```
 
-- **`-n N`**: Display the last N lines (default = 10).
+- **`-n N`, `--lines N`**: Display the last N lines (default = 10).
 - **`file.gz`, `file.bgz`, `file.bz2`, `file.xz`, `file.zip`, or `file.zst`**: Name of the compressed file. The extension may be omitted because compression type is detected automatically.
-- **`-e <name>`**: When reading a `.zip` file, select an entry inside the archive.
+- **`-e <name>`, `--entry <name>`**: When reading a `.zip` file, select an entry inside the archive.
 - If no file is provided, **ztail** reads from standard input.
+- **`-V`, `--version`**: Display program version and exit.
 - **`-h`, `--help`**: Display usage information and exit.
 
 ## 🧪 **Tests**

@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.16)
 # Project Name and Version
 project(ztail VERSION 1.0 LANGUAGES CXX)
 
+# Export version information to the compiler so it can be queried at runtime
+add_compile_definitions(ZTAIL_VERSION="${PROJECT_VERSION}")
+
 # Set C++ Standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
