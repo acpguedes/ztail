@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include <getopt.h>
 #include <cerrno>
 #include <limits>
 #include <stdexcept>
@@ -9,8 +10,10 @@
 void CLI::usage(const char* progName) {
     std::cerr
         << "Usage: " << progName << " [options] <files...>\n"
-        << "  -n N        : print the last N lines (default = 10)\n"
-        << "  -e <name>   : entry name inside zip archive\n"
+        << "  -n, --lines N   : print the last N lines (default = 10)\n"
+        << "  -e, --entry <name> : entry name inside zip archive\n"
+        << "  -V, --version  : display program version and exit\n"
+        << "  -h, --help     : display this help and exit\n"
         << "If no file is provided, the program reads from stdin.\n"
         << "Compression type is detected automatically.\n";
 }
@@ -18,38 +21,45 @@ void CLI::usage(const char* progName) {
 CLIOptions CLI::parse(int argc, char* argv[]) {
     CLIOptions options;
 
-    for (int i = 1; i < argc; ++i) {
-        if (std::strcmp(argv[i], "-h") == 0 || std::strcmp(argv[i], "--help") == 0) {
+    static struct option long_opts[] = {
+        {"help",    no_argument,       nullptr, 'h'},
+        {"version", no_argument,       nullptr, 'V'},
+        {"lines",   required_argument, nullptr, 'n'},
+        {"entry",   required_argument, nullptr, 'e'},
+        {0, 0, 0, 0}
+    };
+
+    int opt;
+    while ((opt = getopt_long(argc, argv, "hn:e:V", long_opts, nullptr)) != -1) {
+        switch (opt) {
+        case 'h':
             CLI::usage(argv[0]);
             std::exit(EXIT_SUCCESS);
-        }
-        else if (std::strcmp(argv[i], "-n") == 0) {
-            if (i + 1 >= argc) {
-                throw std::runtime_error("-n requires a number");
-            }
+        case 'V':
+            std::cout << argv[0] << " version " << ZTAIL_VERSION << std::endl;
+            std::exit(EXIT_SUCCESS);
+        case 'n': {
             char* end = nullptr;
             errno = 0;
-            long val = std::strtol(argv[i + 1], &end, 10);
-            if (errno != 0 || end == argv[i + 1] || *end != '\0' ||
+            long val = std::strtol(optarg, &end, 10);
+            if (errno != 0 || end == optarg || *end != '\0' ||
                 val <= 0 || val > std::numeric_limits<int>::max()) {
-                throw std::runtime_error("-n requires a positive integer");
+                throw std::runtime_error("-n/--lines requires a positive integer");
             }
             options.n = static_cast<int>(val);
-            ++i;
+            break;
         }
-        else if (std::strcmp(argv[i], "-e") == 0) {
-            if (i + 1 >= argc) {
-                throw std::runtime_error("-e requires an entry name");
-            }
-            options.zipEntry = argv[i + 1];
-            ++i;
+        case 'e':
+            options.zipEntry = optarg;
+            break;
+        case '?':
+        default:
+            throw std::runtime_error("Unknown option");
         }
-        else if (argv[i][0] == '-') {
-            throw std::runtime_error(std::string("Unknown option: ") + argv[i]);
-        }
-        else {
-            options.filenames.push_back(argv[i]);
-        }
+    }
+
+    for (int index = optind; index < argc; ++index) {
+        options.filenames.push_back(argv[index]);
     }
 
     return options;
