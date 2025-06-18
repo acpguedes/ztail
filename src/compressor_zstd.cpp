@@ -1,6 +1,6 @@
 #include "compressor_zstd.h"
 #include <cstdio>
-#include <cstring>
+#include <stdexcept>
 
 CompressorZstd::CompressorZstd(const std::string& filename)
     : file(nullptr, &fclose), stream(nullptr, &ZSTD_freeDStream), inBuffer(ZSTD_DStreamInSize()), eof(false)

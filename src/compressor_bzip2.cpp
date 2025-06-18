@@ -1,5 +1,6 @@
 #include "compressor_bzip2.h"
 #include <fstream>
+#include <stdexcept>
 
 CompressorBzip2::CompressorBzip2(const std::string& filename)
     : file(nullptr, &fclose), bz(nullptr), bzerror(BZ_OK), eof(false)

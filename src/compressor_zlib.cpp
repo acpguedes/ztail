@@ -1,5 +1,6 @@
 #include "compressor_zlib.h"
 #include <fstream>
+#include <stdexcept>
 
 CompressorZlib::CompressorZlib(const std::string& filename)
     : gz(nullptr), eof(false)
