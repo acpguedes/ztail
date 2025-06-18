@@ -1,4 +1,5 @@
 #include "compressor_zip.h"
+#include <stdexcept>
 
 CompressorZip::CompressorZip(const std::string& filename, const std::string& entryName)
     : za(nullptr, &zip_close), zf(nullptr, &zip_fclose), entry(entryName), eof(false)

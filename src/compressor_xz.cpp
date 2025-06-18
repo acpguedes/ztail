@@ -1,5 +1,6 @@
 #include "compressor_xz.h"
 #include <fstream>
+#include <stdexcept>
 
 CompressorXz::CompressorXz(const std::string& filename)
     : file(nullptr, &fclose), strm(LZMA_STREAM_INIT), eof(false), inBuffer(1 << 15)

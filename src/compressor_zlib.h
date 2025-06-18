@@ -4,7 +4,6 @@
 #include <zlib.h>
 #include <string>
 #include <vector>
-#include <stdexcept>
 #include <memory>
 #include "icompressor.h"
 
