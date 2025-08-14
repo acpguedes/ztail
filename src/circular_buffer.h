@@ -6,7 +6,7 @@
 
 class CircularBuffer {
 public:
-    explicit CircularBuffer(size_t capacity);
+    explicit CircularBuffer(size_t capacity, size_t lineCapacity = 0);
     void add(std::string&& line);
     void print() const;
 

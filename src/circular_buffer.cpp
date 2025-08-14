@@ -1,12 +1,14 @@
 #include "circular_buffer.h"
 #include <iostream>
 
-CircularBuffer::CircularBuffer(size_t cap)
+CircularBuffer::CircularBuffer(size_t cap, size_t lineCapacity)
     : buffer(cap), capacity(cap), next(0), count(0)
 {
-    // Reserve initial capacity for each string to avoid repeated allocations
-    for (auto& s : buffer) {
-        s.reserve(1024);
+    // Reserve initial capacity for each string when requested
+    if (lineCapacity > 0) {
+        for (auto& s : buffer) {
+            s.reserve(lineCapacity);
+        }
     }
 }
 

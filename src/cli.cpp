@@ -11,6 +11,7 @@ void CLI::usage(const char* progName) {
     std::cerr
         << "Usage: " << progName << " [options] <files...>\n"
         << "  -n, --lines N   : print the last N lines (default = 10)\n"
+        << "  -c, --line-capacity N : pre-reserve N bytes for each line\n"
         << "  -e, --entry <name> : entry name inside zip archive\n"
         << "  -V, --version  : display program version and exit\n"
         << "  -h, --help     : display this help and exit\n"
@@ -22,15 +23,16 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
     CLIOptions options;
 
     static struct option long_opts[] = {
-        {"help",    no_argument,       nullptr, 'h'},
-        {"version", no_argument,       nullptr, 'V'},
-        {"lines",   required_argument, nullptr, 'n'},
-        {"entry",   required_argument, nullptr, 'e'},
+        {"help",          no_argument,       nullptr, 'h'},
+        {"version",       no_argument,       nullptr, 'V'},
+        {"lines",         required_argument, nullptr, 'n'},
+        {"line-capacity", required_argument, nullptr, 'c'},
+        {"entry",         required_argument, nullptr, 'e'},
         {0, 0, 0, 0}
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "hn:e:V", long_opts, nullptr)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hn:c:e:V", long_opts, nullptr)) != -1) {
         switch (opt) {
         case 'h':
             CLI::usage(argv[0]);
@@ -47,6 +49,16 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
                 throw std::runtime_error("-n/--lines requires a positive integer");
             }
             options.n = static_cast<int>(val);
+            break;
+        }
+        case 'c': {
+            char* end = nullptr;
+            errno = 0;
+            long val = std::strtol(optarg, &end, 10);
+            if (errno != 0 || end == optarg || *end != '\0' || val < 0) {
+                throw std::runtime_error("-c/--line-capacity requires a non-negative integer");
+            }
+            options.lineCapacity = static_cast<size_t>(val);
             break;
         }
         case 'e':
