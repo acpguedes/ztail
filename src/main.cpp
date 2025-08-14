@@ -16,8 +16,6 @@
 #include <vector>
 #include <cstdlib>     // for EXIT_SUCCESS/EXIT_FAILURE
 
-static const size_t READ_BUFFER_SIZE = 1 << 20; // 1MB
-
 #ifndef ZTAIL_NO_MAIN
 int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
@@ -29,7 +27,7 @@ int main(int argc, char* argv[]) {
             for (const auto& filename : options.filenames) {
                 CircularBuffer cb(options.n, options.lineCapacity);
                 Parser parser(cb, options.lineCapacity);
-                std::vector<char> buffer(READ_BUFFER_SIZE);
+                std::vector<char> buffer(options.readBufferSize);
                 size_t bytesDecompressed = 0;
 
                 DetectionResult det = detectCompressionType(filename);
@@ -55,7 +53,7 @@ int main(int argc, char* argv[]) {
                     parser.finalize();
                 } else {
                     det.file.reset();
-                    tailPlainFile(filename, parser, options.n, READ_BUFFER_SIZE);
+                    tailPlainFile(filename, parser, options.n, options.readBufferSize);
                 }
 
                 cb.print();
@@ -63,7 +61,7 @@ int main(int argc, char* argv[]) {
         } else {
             CircularBuffer cb(options.n, options.lineCapacity);
             Parser parser(cb, options.lineCapacity);
-            std::vector<char> buffer(READ_BUFFER_SIZE);
+            std::vector<char> buffer(options.readBufferSize);
             while (true) {
                 size_t bytesRead = std::fread(buffer.data(), 1, buffer.size(), stdin);
                 if (bytesRead == 0) break;

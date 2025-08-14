@@ -13,6 +13,7 @@ void CLI::usage(const char* progName) {
         << "  -n, --lines N   : print the last N lines (default = 10)\n"
         << "  -c, --line-capacity N : pre-reserve N bytes for each line\n"
         << "  -b, --zlib-buffer N : set zlib buffer size in bytes (default = 1048576)\n"
+        << "  -r, --read-buffer N : set read buffer size in bytes (default = 1048576)\n"
         << "  -e, --entry <name> : entry name inside zip archive\n"
         << "  -V, --version  : display program version and exit\n"
         << "  -h, --help     : display this help and exit\n"
@@ -29,12 +30,13 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
         {"lines",         required_argument, nullptr, 'n'},
         {"line-capacity", required_argument, nullptr, 'c'},
         {"zlib-buffer",   required_argument, nullptr, 'b'},
+        {"read-buffer",   required_argument, nullptr, 'r'},
         {"entry",         required_argument, nullptr, 'e'},
         {0, 0, 0, 0}
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "hn:c:b:e:V", long_opts, nullptr)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hn:c:b:r:e:V", long_opts, nullptr)) != -1) {
         switch (opt) {
         case 'h':
             CLI::usage(argv[0]);
@@ -73,6 +75,16 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
                                          std::to_string(std::numeric_limits<unsigned int>::max()));
             }
             options.zlibBufferSize = static_cast<size_t>(val);
+            break;
+        }
+        case 'r': {
+            char* end = nullptr;
+            errno = 0;
+            long val = std::strtol(optarg, &end, 10);
+            if (errno != 0 || end == optarg || *end != '\0' || val <= 0) {
+                throw std::runtime_error("-r/--read-buffer requires a positive integer");
+            }
+            options.readBufferSize = static_cast<size_t>(val);
             break;
         }
         case 'e':
