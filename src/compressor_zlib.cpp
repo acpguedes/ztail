@@ -3,7 +3,7 @@
 #include <cerrno>
 #include <unistd.h>
 
-CompressorZlib::CompressorZlib(FilePtr&& file, const std::string& filename)
+CompressorZlib::CompressorZlib(FilePtr&& file, const std::string& filename, size_t bufferSize)
     : gz(nullptr), eof(false), filename(filename)
 {
     if (!file) {
@@ -28,6 +28,7 @@ CompressorZlib::CompressorZlib(FilePtr&& file, const std::string& filename)
         ::close(dupfd);
         throw std::runtime_error("zlib error (" + std::to_string(errno) + ") while opening '" + filename + "'");
     }
+    gzbuffer(gz.get(), static_cast<unsigned int>(bufferSize));
 }
 
 bool CompressorZlib::decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) {

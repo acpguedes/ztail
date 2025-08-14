@@ -9,6 +9,7 @@ struct CLIOptions {
     size_t lineCapacity = 0; // Optional pre-reserve size for each line
     std::vector<std::string> filenames;   // Names of files to process
     std::string zipEntry;   // Optional entry name for zip files
+    size_t zlibBufferSize = 1 << 20; // Buffer size for zlib operations
 };
 
 class CLI {
