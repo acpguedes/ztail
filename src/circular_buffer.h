@@ -4,11 +4,17 @@
 #include <string>
 #include <vector>
 
+#ifdef USE_CHAR_RING_BUFFER
+#include "char_ring_buffer.h"
+using CircularBuffer = CharRingBuffer;
+#else
+
 class CircularBuffer {
 public:
     explicit CircularBuffer(size_t capacity, size_t lineCapacity = 0);
     void add(std::string&& line);
     void print() const;
+    size_t memoryUsage() const;
 
 private:
     std::vector<std::string> buffer;
@@ -16,5 +22,7 @@ private:
     size_t next;
     size_t count;
 };
+
+#endif // USE_CHAR_RING_BUFFER
 
 #endif // CIRCULAR_BUFFER_H

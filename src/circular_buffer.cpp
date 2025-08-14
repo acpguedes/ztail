@@ -1,3 +1,4 @@
+#ifndef USE_CHAR_RING_BUFFER
 #include "circular_buffer.h"
 #include <iostream>
 
@@ -32,3 +33,13 @@ void CircularBuffer::print() const {
         std::cout << buffer[idx] << "\n";
     }
 }
+
+size_t CircularBuffer::memoryUsage() const {
+    size_t total = sizeof(CircularBuffer) + buffer.capacity() * sizeof(std::string);
+    for (const auto& s : buffer) {
+        total += s.capacity();
+    }
+    return total;
+}
+
+#endif // USE_CHAR_RING_BUFFER
