@@ -20,6 +20,7 @@ public:
 private:
     std::unique_ptr<gzFile_s, GzCloser> gz;
     bool eof;
+    std::string filename;
 };
 
 #endif // COMPRESSOR_ZLIB_H

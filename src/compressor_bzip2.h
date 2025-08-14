@@ -22,6 +22,7 @@ private:
     BZFILE* bz;
     int bzerror;
     bool eof;
+    std::string filename;
 };
 
 #endif // COMPRESSOR_BZIP2_H

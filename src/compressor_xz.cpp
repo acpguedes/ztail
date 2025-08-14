@@ -1,24 +1,25 @@
 #include "compressor_xz.h"
 #include <fstream>
 #include <stdexcept>
+#include <cerrno>
 
 CompressorXz::CompressorXz(const std::string& filename)
-    : file(nullptr, &fclose), strm(LZMA_STREAM_INIT), eof(false), inBuffer(1 << 15)
+    : file(nullptr, &fclose), strm(LZMA_STREAM_INIT), eof(false), inBuffer(1 << 15), filename(filename)
 {
     std::ifstream check(filename, std::ios::binary);
     if (!check) {
-        throw std::runtime_error("Failed to open xz file: " + filename);
+        throw std::runtime_error("lzma error (" + std::to_string(errno) + ") while opening '" + filename + "'");
     }
 
     file.reset(fopen(filename.c_str(), "rb"));
     if (!file) {
-        throw std::runtime_error("Failed to open xz file: " + filename);
+        throw std::runtime_error("lzma error (" + std::to_string(errno) + ") while opening '" + filename + "'");
     }
 
     lzma_ret ret = lzma_stream_decoder(&strm, UINT64_MAX, 0);
     if (ret != LZMA_OK) {
         file.reset();
-        throw std::runtime_error("Failed to initialize xz decoder");
+        throw std::runtime_error("lzma error (" + std::to_string(ret) + ") while initializing '" + filename + "'");
     }
 }
 
@@ -54,7 +55,7 @@ bool CompressorXz::decompress(std::vector<char>& outBuffer, size_t& bytesDecompr
             break;
         }
         if (ret != LZMA_OK && ret != LZMA_BUF_ERROR) {
-            throw std::runtime_error("Error while decompressing xz file");
+            throw std::runtime_error("lzma error (" + std::to_string(ret) + ") while decompressing '" + filename + "'");
         }
         if (ret == LZMA_BUF_ERROR && strm.avail_in == 0) {
             // Need more input

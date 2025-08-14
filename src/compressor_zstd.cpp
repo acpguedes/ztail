@@ -1,24 +1,25 @@
 #include "compressor_zstd.h"
 #include <cstdio>
 #include <stdexcept>
+#include <cerrno>
 
 CompressorZstd::CompressorZstd(const std::string& filename)
-    : file(nullptr, &fclose), stream(nullptr, &ZSTD_freeDStream), inBuffer(ZSTD_DStreamInSize()), eof(false)
+    : file(nullptr, &fclose), stream(nullptr, &ZSTD_freeDStream), inBuffer(ZSTD_DStreamInSize()), eof(false), filename(filename)
 {
     file.reset(fopen(filename.c_str(), "rb"));
     if (!file) {
-        throw std::runtime_error("Failed to open zst file: " + filename);
+        throw std::runtime_error("zstd error (" + std::to_string(errno) + ") while opening '" + filename + "'");
     }
     stream.reset(ZSTD_createDStream());
     if (!stream) {
         file.reset();
-        throw std::runtime_error("Failed to create ZSTD stream");
+        throw std::runtime_error("zstd error (0) while creating stream for '" + filename + "'");
     }
     size_t ret = ZSTD_initDStream(stream.get());
     if (ZSTD_isError(ret)) {
         stream.reset();
         file.reset();
-        throw std::runtime_error("Failed to init ZSTD stream");
+        throw std::runtime_error("zstd error (" + std::to_string(static_cast<int>(ret)) + ") while initializing '" + filename + "'");
     }
 }
 
@@ -48,7 +49,7 @@ bool CompressorZstd::decompress(std::vector<char>& outBuffer, size_t& bytesDecom
 
         size_t ret = ZSTD_decompressStream(stream.get(), &out, &in);
         if (ZSTD_isError(ret)) {
-            throw std::runtime_error("ZSTD decompression error");
+            throw std::runtime_error("zstd error (" + std::to_string(static_cast<int>(ret)) + ") while decompressing '" + filename + "'");
         }
         if (ret == 0 && in.pos == in.size) {
             eof = true;
