@@ -2,6 +2,7 @@
 #include <fstream>
 #include <algorithm>
 #include <stdexcept>
+#include <vector>
 
 void tailPlainFile(const std::string& filename, Parser& parser, size_t n, size_t bufferSize) {
     std::ifstream file(filename, std::ios::binary);
@@ -11,7 +12,7 @@ void tailPlainFile(const std::string& filename, Parser& parser, size_t n, size_t
 
     file.seekg(0, std::ios::end);
     std::streamoff size = file.tellg();
-    std::string data;
+    std::vector<std::string> chunks;
     std::string chunk;
     size_t lines = 0;
 
@@ -21,11 +22,14 @@ void tailPlainFile(const std::string& filename, Parser& parser, size_t n, size_t
         file.seekg(size, std::ios::beg);
         chunk.resize(toRead);
         file.read(&chunk[0], toRead);
-        data.insert(0, chunk);
-        lines = std::count(data.begin(), data.end(), '\n');
+        lines += static_cast<size_t>(std::count(chunk.begin(), chunk.end(), '\n'));
+        chunks.emplace_back(std::move(chunk));
+        chunk.clear();
         if (size == 0) break;
     }
 
-    parser.parse(data.data(), data.size());
+    for (auto it = chunks.rbegin(); it != chunks.rend(); ++it) {
+        parser.parse(it->data(), it->size());
+    }
     parser.finalize();
 }
