@@ -19,6 +19,7 @@ private:
     std::unique_ptr<ZSTD_DStream, decltype(&ZSTD_freeDStream)> stream;
     std::vector<char> inBuffer;
     bool eof;
+    std::string filename;
 };
 
 #endif // COMPRESSOR_ZSTD_H

@@ -22,6 +22,7 @@ private:
     lzma_stream strm;
     bool eof;
     std::vector<uint8_t> inBuffer;
+    std::string filename;
 };
 
 #endif // COMPRESSOR_XZ_H

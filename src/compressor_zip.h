@@ -21,6 +21,7 @@ private:
     std::unique_ptr<zip_file_t, decltype(&zip_fclose)> zf;
     std::string entry;
     bool eof;
+    std::string filename;
 };
 
 #endif // COMPRESSOR_ZIP_H
