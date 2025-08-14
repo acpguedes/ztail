@@ -6,12 +6,13 @@
 #include <vector>
 #include <memory>
 #include "icompressor.h"
+#include "file_ptr.h"
 
 struct GzCloser { void operator()(gzFile f) const { if (f) gzclose(f); } };
 
 class CompressorZlib : public ICompressor {
 public:
-    explicit CompressorZlib(const std::string& filename);
+    explicit CompressorZlib(FilePtr&& file, const std::string& filename);
 
     // Reads the next chunk of decompressed data
     // Returns true while data is available, false on EOF

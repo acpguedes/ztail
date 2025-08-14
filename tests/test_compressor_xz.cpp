@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "compressor_xz.h"
+#include "compression_type.h"
 #include <fstream>
 #include <lzma.h>
 
@@ -22,7 +23,9 @@ TEST(CompressorXzTest, DecompressValidFile) {
 
     create_xz_file(filename, content);
 
-    CompressorXz compressor(filename);
+    DetectionResult det = detectCompressionType(filename);
+    ASSERT_EQ(det.type, CompressionType::XZ);
+    CompressorXz compressor(std::move(det.file), filename);
     std::vector<char> buffer(1024);
     size_t bytesDecompressed = 0;
 
@@ -43,7 +46,8 @@ TEST(CompressorXzTest, DecompressInvalidFile) {
     ofs.close();
 
     EXPECT_THROW({
-        CompressorXz compressor(filename);
+        DetectionResult det = detectCompressionType(filename);
+        CompressorXz compressor(std::move(det.file), filename);
         std::vector<char> buffer(1024);
         size_t bytesDecompressed = 0;
         compressor.decompress(buffer, bytesDecompressed);

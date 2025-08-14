@@ -6,10 +6,11 @@
 #include <zip.h>
 #include <memory>
 #include "icompressor.h"
+#include "file_ptr.h"
 
 class CompressorZip : public ICompressor {
 public:
-    explicit CompressorZip(const std::string& filename, const std::string& entry = "");
+    explicit CompressorZip(FilePtr&& file, const std::string& filename, const std::string& entry = "");
     ~CompressorZip();
 
     // Reads the next chunk of decompressed data

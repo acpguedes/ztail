@@ -1,24 +1,23 @@
 #include "compressor_zstd.h"
-#include <cstdio>
 #include <stdexcept>
 #include <cerrno>
 
-CompressorZstd::CompressorZstd(const std::string& filename)
-    : file(nullptr, &fclose), stream(nullptr, &ZSTD_freeDStream), inBuffer(ZSTD_DStreamInSize()), eof(false), filename(filename)
+CompressorZstd::CompressorZstd(FilePtr&& file, const std::string& filename)
+    : file(std::move(file)), stream(nullptr, &ZSTD_freeDStream), inBuffer(ZSTD_DStreamInSize()), eof(false), filename(filename)
 {
-    file.reset(fopen(filename.c_str(), "rb"));
-    if (!file) {
+    if (!this->file) {
         throw std::runtime_error("zstd error (" + std::to_string(errno) + ") while opening '" + filename + "'");
     }
+    std::fseek(this->file.get(), 0, SEEK_SET);
     stream.reset(ZSTD_createDStream());
     if (!stream) {
-        file.reset();
+        this->file.reset();
         throw std::runtime_error("zstd error (0) while creating stream for '" + filename + "'");
     }
     size_t ret = ZSTD_initDStream(stream.get());
     if (ZSTD_isError(ret)) {
         stream.reset();
-        file.reset();
+        this->file.reset();
         throw std::runtime_error("zstd error (" + std::to_string(static_cast<int>(ret)) + ") while initializing '" + filename + "'");
     }
 }

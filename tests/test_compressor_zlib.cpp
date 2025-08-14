@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "compressor_zlib.h"
+#include "compression_type.h"
 #include <fstream>
 
 // Helper function to create a temporary gz file for testing
@@ -16,7 +17,9 @@ TEST(CompressorZlibTest, DecompressValidFile) {
 
     create_gz_file(filename, content);
 
-    CompressorZlib compressor(filename);
+    DetectionResult det = detectCompressionType(filename);
+    ASSERT_EQ(det.type, CompressionType::GZIP);
+    CompressorZlib compressor(std::move(det.file), filename);
     std::vector<char> buffer(1024);
     size_t bytesDecompressed = 0;
 
@@ -37,7 +40,8 @@ TEST(CompressorZlibTest, DecompressInvalidFile) {
     ofs.close();
 
     EXPECT_THROW({
-        CompressorZlib compressor(filename);
+        DetectionResult det = detectCompressionType(filename);
+        CompressorZlib compressor(std::move(det.file), filename);
     }, std::runtime_error);
 
     remove(filename.c_str());

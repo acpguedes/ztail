@@ -2,6 +2,7 @@
 #define COMPRESSION_TYPE_H
 
 #include <string>
+#include "file_ptr.h"
 
 enum class CompressionType {
     NONE,
@@ -12,7 +13,12 @@ enum class CompressionType {
     ZSTD
 };
 
-CompressionType detectCompressionType(const std::string& filename);
+struct DetectionResult {
+    CompressionType type;
+    FilePtr file;
+};
+
+DetectionResult detectCompressionType(const std::string& filename);
 
 
 #endif // COMPRESSION_TYPE_H

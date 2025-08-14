@@ -7,10 +7,11 @@
 #include <cstdio>
 #include <memory>
 #include "icompressor.h"
+#include "file_ptr.h"
 
 class CompressorBzip2 : public ICompressor {
 public:
-    explicit CompressorBzip2(const std::string& filename);
+    explicit CompressorBzip2(FilePtr&& file, const std::string& filename);
     ~CompressorBzip2();
 
     // Reads the next chunk of decompressed data
@@ -18,7 +19,7 @@ public:
     bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
 
 private:
-    std::unique_ptr<FILE, decltype(&fclose)> file;
+    FilePtr file;
     BZFILE* bz;
     int bzerror;
     bool eof;

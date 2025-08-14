@@ -30,19 +30,19 @@ int main(int argc, char* argv[]) {
                 std::vector<char> buffer(READ_BUFFER_SIZE);
                 size_t bytesDecompressed = 0;
 
-                CompressionType type = detectCompressionType(filename);
+                DetectionResult det = detectCompressionType(filename);
 
                 std::unique_ptr<ICompressor> comp;
-                if (type == CompressionType::GZIP) {
-                    comp = std::make_unique<CompressorZlib>(filename);
-                } else if (type == CompressionType::BZIP2) {
-                    comp = std::make_unique<CompressorBzip2>(filename);
-                } else if (type == CompressionType::XZ) {
-                    comp = std::make_unique<CompressorXz>(filename);
-                } else if (type == CompressionType::ZIP) {
-                    comp = std::make_unique<CompressorZip>(filename, options.zipEntry);
-                } else if (type == CompressionType::ZSTD) {
-                    comp = std::make_unique<CompressorZstd>(filename);
+                if (det.type == CompressionType::GZIP) {
+                    comp = std::make_unique<CompressorZlib>(std::move(det.file), filename);
+                } else if (det.type == CompressionType::BZIP2) {
+                    comp = std::make_unique<CompressorBzip2>(std::move(det.file), filename);
+                } else if (det.type == CompressionType::XZ) {
+                    comp = std::make_unique<CompressorXz>(std::move(det.file), filename);
+                } else if (det.type == CompressionType::ZIP) {
+                    comp = std::make_unique<CompressorZip>(std::move(det.file), filename, options.zipEntry);
+                } else if (det.type == CompressionType::ZSTD) {
+                    comp = std::make_unique<CompressorZstd>(std::move(det.file), filename);
                 }
 
                 if (comp) {
@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
                     }
                     parser.finalize();
                 } else {
+                    det.file.reset();
                     tailPlainFile(filename, parser, options.n, READ_BUFFER_SIZE);
                 }
 

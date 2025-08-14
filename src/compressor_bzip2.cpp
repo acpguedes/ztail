@@ -1,27 +1,22 @@
 #include "compressor_bzip2.h"
-#include <fstream>
 #include <stdexcept>
 #include <cerrno>
 
-CompressorBzip2::CompressorBzip2(const std::string& filename)
-    : file(nullptr, &fclose), bz(nullptr), bzerror(BZ_OK), eof(false), filename(filename)
+CompressorBzip2::CompressorBzip2(FilePtr&& file, const std::string& filename)
+    : file(std::move(file)), bz(nullptr), bzerror(BZ_OK), eof(false), filename(filename)
 {
-    std::ifstream check(filename, std::ios::binary);
-    if (!check) {
+    if (!this->file) {
         throw std::runtime_error("bzip2 error (" + std::to_string(errno) + ") while opening '" + filename + "'");
     }
 
-    file.reset(fopen(filename.c_str(), "rb"));
-    if (!file) {
-        throw std::runtime_error("bzip2 error (" + std::to_string(errno) + ") while opening '" + filename + "'");
-    }
+    std::fseek(this->file.get(), 0, SEEK_SET);
 
-    bz = BZ2_bzReadOpen(&bzerror, file.get(), 0, 0, nullptr, 0);
+    bz = BZ2_bzReadOpen(&bzerror, this->file.get(), 0, 0, nullptr, 0);
     if (!bz || bzerror != BZ_OK) {
         if (bz) {
             BZ2_bzReadClose(&bzerror, bz);
         }
-        file.reset();
+        this->file.reset();
         throw std::runtime_error("bzip2 error (" + std::to_string(bzerror) + ") while initializing '" + filename + "'");
     }
 }

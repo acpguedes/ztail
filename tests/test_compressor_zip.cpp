@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "compressor_zip.h"
+#include "compression_type.h"
 #include <fstream>
 #include <zip.h>
 
@@ -24,7 +25,9 @@ TEST(CompressorZipTest, DecompressValidFile) {
 
     create_zip_file(filename, content);
 
-    CompressorZip compressor(filename, "test.txt");
+    DetectionResult det = detectCompressionType(filename);
+    ASSERT_EQ(det.type, CompressionType::ZIP);
+    CompressorZip compressor(std::move(det.file), filename, "test.txt");
     std::vector<char> buffer(1024);
     size_t bytesDecompressed = 0;
 
@@ -45,7 +48,8 @@ TEST(CompressorZipTest, DecompressInvalidFile) {
     ofs.close();
 
     EXPECT_THROW({
-        CompressorZip compressor(filename);
+        DetectionResult det = detectCompressionType(filename);
+        CompressorZip compressor(std::move(det.file), filename);
         std::vector<char> buffer(1024);
         size_t bytesDecompressed = 0;
 

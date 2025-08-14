@@ -41,21 +41,21 @@ static void create_zip(const std::string& fname, const std::string& data){
 TEST(CompressionDetection, GzipWrongExtension){
     const std::string fname = "sample.txt";
     create_gz(fname, "a\n");
-    EXPECT_EQ(detectCompressionType(fname), CompressionType::GZIP);
+    EXPECT_EQ(detectCompressionType(fname).type, CompressionType::GZIP);
     std::remove(fname.c_str());
 }
 
 TEST(CompressionDetection, Bzip2NoExtension){
     const std::string fname = "sample";
     create_bz2(fname, "b\n");
-    EXPECT_EQ(detectCompressionType(fname), CompressionType::BZIP2);
+    EXPECT_EQ(detectCompressionType(fname).type, CompressionType::BZIP2);
     std::remove(fname.c_str());
 }
 
 TEST(CompressionDetection, ZipMisleadingExtension){
     const std::string fname = "archive.gz";
     create_zip(fname, "c\n");
-    EXPECT_EQ(detectCompressionType(fname), CompressionType::ZIP);
+    EXPECT_EQ(detectCompressionType(fname).type, CompressionType::ZIP);
     std::remove(fname.c_str());
 }
 
@@ -83,14 +83,14 @@ static void create_zst(const std::string& fname, const std::string& data){
 TEST(CompressionDetection, XzNoExtension){
     const std::string fname = "archive";
     create_xz(fname, "d\n");
-    EXPECT_EQ(detectCompressionType(fname), CompressionType::XZ);
+    EXPECT_EQ(detectCompressionType(fname).type, CompressionType::XZ);
     std::remove(fname.c_str());
 }
 
 TEST(CompressionDetection, ZstdNoExtension){
     const std::string fname = "compressed";
     create_zst(fname, "e\n");
-    EXPECT_EQ(detectCompressionType(fname), CompressionType::ZSTD);
+    EXPECT_EQ(detectCompressionType(fname).type, CompressionType::ZSTD);
     std::remove(fname.c_str());
 }
 
@@ -99,7 +99,7 @@ TEST(CompressionDetection, PlaintextFile){
     std::ofstream ofs(fname);
     ofs << "hello\n";
     ofs.close();
-    EXPECT_EQ(detectCompressionType(fname), CompressionType::NONE);
+    EXPECT_EQ(detectCompressionType(fname).type, CompressionType::NONE);
     std::remove(fname.c_str());
 }
 
