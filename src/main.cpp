@@ -15,8 +15,70 @@
 #include <cstdio>      // for fread
 #include <vector>
 #include <cstdlib>     // for EXIT_SUCCESS/EXIT_FAILURE
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #ifndef ZTAIL_NO_MAIN
+namespace {
+
+template <typename Reader>
+void processStream(Reader reader, Parser& parser, CircularBuffer& cb, size_t bufferSize) {
+    std::vector<char> buffers[2] = {
+        std::vector<char>(bufferSize),
+        std::vector<char>(bufferSize)
+    };
+    size_t sizes[2] = {0, 0};
+    bool ready[2] = {false, false};
+    bool finished = false;
+    std::mutex m;
+    std::condition_variable cv;
+
+    std::thread producer([&]() {
+        int idx = 0;
+        size_t n = 0;
+        while (reader(buffers[idx], n)) {
+            if (n > 0) {
+                {
+                    std::unique_lock<std::mutex> lock(m);
+                    sizes[idx] = n;
+                    ready[idx] = true;
+                }
+                cv.notify_one();
+                idx ^= 1;
+            }
+        }
+        {
+            std::unique_lock<std::mutex> lock(m);
+            finished = true;
+        }
+        cv.notify_all();
+    });
+
+    std::thread consumer([&]() {
+        int idx = 0;
+        while (true) {
+            std::unique_lock<std::mutex> lock(m);
+            cv.wait(lock, [&] { return ready[idx] || finished; });
+            if (ready[idx]) {
+                size_t n = sizes[idx];
+                ready[idx] = false;
+                lock.unlock();
+                parser.parse(buffers[idx].data(), n);
+                idx ^= 1;
+            } else if (finished) {
+                break;
+            }
+        }
+        parser.finalize();
+        cb.print();
+    });
+
+    producer.join();
+    consumer.join();
+}
+
+} // namespace
 int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
     std::cout.tie(nullptr);
@@ -27,8 +89,6 @@ int main(int argc, char* argv[]) {
             for (const auto& filename : options.filenames) {
                 CircularBuffer cb(options.n, options.lineCapacity);
                 Parser parser(cb, options.lineCapacity);
-                std::vector<char> buffer(options.readBufferSize);
-                size_t bytesDecompressed = 0;
 
                 DetectionResult det = detectCompressionType(filename);
 
@@ -46,29 +106,26 @@ int main(int argc, char* argv[]) {
                 }
 
                 if (comp) {
-                    while (comp->decompress(buffer, bytesDecompressed)) {
-                        if (bytesDecompressed)
-                            parser.parse(buffer.data(), bytesDecompressed);
-                    }
-                    parser.finalize();
+                    processStream([
+                        &](std::vector<char>& buf, size_t& n) {
+                            return comp->decompress(buf, n);
+                        },
+                        parser, cb, options.readBufferSize);
                 } else {
                     det.file.reset();
                     tailPlainFile(filename, parser, options.n, options.readBufferSize);
+                    cb.print();
                 }
-
-                cb.print();
             }
         } else {
             CircularBuffer cb(options.n, options.lineCapacity);
             Parser parser(cb, options.lineCapacity);
-            std::vector<char> buffer(options.readBufferSize);
-            while (true) {
-                size_t bytesRead = std::fread(buffer.data(), 1, buffer.size(), stdin);
-                if (bytesRead == 0) break;
-                parser.parse(buffer.data(), bytesRead);
-            }
-            parser.finalize();
-            cb.print();
+            processStream([
+                &](std::vector<char>& buf, size_t& n) {
+                    n = std::fread(buf.data(), 1, buf.size(), stdin);
+                    return n > 0;
+                },
+                parser, cb, options.readBufferSize);
         }
     } catch (const std::exception& ex) {
         std::cerr << "ERROR: " << ex.what() << std::endl;
