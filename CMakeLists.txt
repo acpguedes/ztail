@@ -27,6 +27,7 @@ endif()
 # Option to build portable binaries
 option(BUILD_PORTABLE "Build without native CPU optimizations" OFF)
 option(USE_CHAR_RING_BUFFER "Use CharRingBuffer instead of std::string CircularBuffer" OFF)
+option(ZTAIL_USE_THREADS "Enable producer/consumer threading" ON)
 
 # Compiler Optimization Flags
 add_compile_options(
@@ -68,7 +69,9 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED libzip)
 pkg_check_modules(LIBLZMA REQUIRED liblzma)
 pkg_check_modules(LIBZSTD REQUIRED libzstd)
-find_package(Threads REQUIRED)
+if(ZTAIL_USE_THREADS)
+    find_package(Threads REQUIRED)
+endif()
 
 if(LIBZIP_FOUND)
     message(STATUS "LibZip found: ${LIBZIP_INCLUDE_DIRS}")
@@ -131,7 +134,11 @@ endif()
 
 # Executable
 add_executable(ztail src/main.cpp)
-target_link_libraries(ztail PRIVATE ztail_lib Threads::Threads)
+target_link_libraries(ztail PRIVATE ztail_lib)
+if(ZTAIL_USE_THREADS)
+    target_link_libraries(ztail PRIVATE Threads::Threads)
+    target_compile_definitions(ztail PRIVATE ZTAIL_USE_THREADS)
+endif()
 
 # ------------------------------------------------------------------------------
 # Tests
@@ -158,7 +165,11 @@ if(BUILD_TESTING)
         tests/test_detection.cpp
         src/main.cpp
     )
-    target_link_libraries(ztail_tests PRIVATE gtest_main ztail_lib Threads::Threads)
+    target_link_libraries(ztail_tests PRIVATE gtest_main ztail_lib)
+    if(ZTAIL_USE_THREADS)
+        target_link_libraries(ztail_tests PRIVATE Threads::Threads)
+        target_compile_definitions(ztail_tests PRIVATE ZTAIL_USE_THREADS)
+    endif()
     target_compile_definitions(ztail_tests PRIVATE ZTAIL_NO_MAIN)
     if(USE_CHAR_RING_BUFFER)
         target_compile_definitions(ztail_tests PRIVATE USE_CHAR_RING_BUFFER)
