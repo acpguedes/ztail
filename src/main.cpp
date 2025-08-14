@@ -20,6 +20,8 @@ static const size_t READ_BUFFER_SIZE = 1 << 20; // 1MB
 
 #ifndef ZTAIL_NO_MAIN
 int main(int argc, char* argv[]) {
+    std::ios::sync_with_stdio(false);
+    std::cout.tie(nullptr);
     try {
         CLIOptions options = CLI::parse(argc, argv);
 
