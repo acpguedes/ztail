@@ -51,6 +51,13 @@ Library names may vary on other operating systems.
    cmake .. -DBUILD_TESTING=ON
    ```
 
+   To generate a portable binary that avoids CPU-specific optimizations, enable the
+   `BUILD_PORTABLE` option:
+
+   ```bash
+   cmake .. -DBUILD_PORTABLE=ON
+   ```
+
 4. **Build the Project:**
 
    ```bash

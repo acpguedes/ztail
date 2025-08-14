@@ -24,12 +24,20 @@ else()
     message(WARNING "IPO / LTO not supported: <${ipo_error}>")
 endif()
 
+# Option to build portable binaries
+option(BUILD_PORTABLE "Build without native CPU optimizations" OFF)
+
 # Compiler Optimization Flags
 add_compile_options(
     -O3
-    -march=native
     -pipe
 )
+
+if(BUILD_PORTABLE)
+    add_compile_options(-mtune=generic)
+else()
+    add_compile_options(-march=native)
+endif()
 
 if(ipo_supported)
     add_compile_options(-flto)
