@@ -8,7 +8,7 @@
 // (separated by '\n') and adding them to the CircularBuffer.
 class Parser {
 public:
-    explicit Parser(CircularBuffer& cb);
+    explicit Parser(CircularBuffer& cb, size_t lineCapacity = 0);
 
     // Processes a chunk of data, splitting by '\n'
     void parse(const char* data, size_t size);

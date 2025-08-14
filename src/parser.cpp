@@ -1,10 +1,12 @@
 #include "parser.h"
 #include <cstring> // memchr
 
-Parser::Parser(CircularBuffer& cb)
+Parser::Parser(CircularBuffer& cb, size_t lineCapacity)
     : circularBuffer(cb)
 {
-    partial.reserve(1024);
+    if (lineCapacity > 0) {
+        partial.reserve(lineCapacity);
+    }
 }
 
 void Parser::parse(const char* data, size_t size) {
