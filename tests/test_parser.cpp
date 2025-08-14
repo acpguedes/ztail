@@ -4,7 +4,7 @@
 
 TEST(ParserTest, ParseLines) {
     CircularBuffer cb(5, 16);
-    Parser parser(cb);
+    Parser parser(cb, 16);
 
     const char* data = "Line A\nLine B\nLine C\n";
     parser.parse(data, strlen(data));
@@ -19,7 +19,7 @@ TEST(ParserTest, ParseLines) {
 
 TEST(ParserTest, ParseWithPartialLine) {
     CircularBuffer cb(5, 16);
-    Parser parser(cb);
+    Parser parser(cb, 16);
 
     const char* data = "Line A\nLine B";
     parser.parse(data, strlen(data));

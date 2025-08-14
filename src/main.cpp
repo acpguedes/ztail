@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
         if (!options.filenames.empty()) {
             for (const auto& filename : options.filenames) {
                 CircularBuffer cb(options.n, options.lineCapacity);
-                Parser parser(cb);
+                Parser parser(cb, options.lineCapacity);
                 std::vector<char> buffer(READ_BUFFER_SIZE);
                 size_t bytesDecompressed = 0;
 
@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
             }
         } else {
             CircularBuffer cb(options.n, options.lineCapacity);
-            Parser parser(cb);
+            Parser parser(cb, options.lineCapacity);
             std::vector<char> buffer(READ_BUFFER_SIZE);
             while (true) {
                 size_t bytesRead = std::fread(buffer.data(), 1, buffer.size(), stdin);
