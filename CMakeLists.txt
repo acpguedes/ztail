@@ -26,6 +26,7 @@ endif()
 
 # Option to build portable binaries
 option(BUILD_PORTABLE "Build without native CPU optimizations" OFF)
+option(USE_CHAR_RING_BUFFER "Use CharRingBuffer instead of std::string CircularBuffer" OFF)
 
 # Compiler Optimization Flags
 add_compile_options(
@@ -100,6 +101,7 @@ include(CTest)
 # Source Files
 set(ZTAIL_LIB_SOURCES
     src/circular_buffer.cpp
+    src/char_ring_buffer.cpp
     src/cli.cpp
     src/compressor_zlib.cpp
     src/compressor_bzip2.cpp
@@ -122,6 +124,9 @@ target_link_libraries(ztail_lib
         ${LIBZSTD_LIBRARIES}
 )
 target_include_directories(ztail_lib PUBLIC src)
+if(USE_CHAR_RING_BUFFER)
+    target_compile_definitions(ztail_lib PUBLIC USE_CHAR_RING_BUFFER)
+endif()
 
 # Executable
 add_executable(ztail src/main.cpp)
@@ -141,6 +146,8 @@ if(BUILD_TESTING)
 
     add_executable(ztail_tests
         tests/test_circular_buffer.cpp
+        tests/test_char_ring_buffer.cpp
+        tests/test_buffer_bench.cpp
         tests/test_compressor_zlib.cpp
         tests/test_compressor_bzip2.cpp
         tests/test_compressor_xz.cpp
@@ -152,6 +159,9 @@ if(BUILD_TESTING)
     )
     target_link_libraries(ztail_tests PRIVATE gtest_main ztail_lib)
     target_compile_definitions(ztail_tests PRIVATE ZTAIL_NO_MAIN)
+    if(USE_CHAR_RING_BUFFER)
+        target_compile_definitions(ztail_tests PRIVATE USE_CHAR_RING_BUFFER)
+    endif()
 
     include(GoogleTest)
     gtest_discover_tests(ztail_tests)
