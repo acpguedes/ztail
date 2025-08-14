@@ -15,15 +15,18 @@
 #include <cstdio>      // for fread
 #include <vector>
 #include <cstdlib>     // for EXIT_SUCCESS/EXIT_FAILURE
+#if ZTAIL_USE_THREADS
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#endif
 
 #ifndef ZTAIL_NO_MAIN
 namespace {
 
 template <typename Reader>
 void processStream(Reader reader, Parser& parser, CircularBuffer& cb, size_t bufferSize) {
+#if ZTAIL_USE_THREADS
     std::vector<char> buffers[2] = {
         std::vector<char>(bufferSize),
         std::vector<char>(bufferSize)
@@ -76,6 +79,15 @@ void processStream(Reader reader, Parser& parser, CircularBuffer& cb, size_t buf
 
     producer.join();
     consumer.join();
+#else
+    std::vector<char> buf(bufferSize);
+    size_t n = 0;
+    while (reader(buf, n)) {
+        parser.parse(buf.data(), n);
+    }
+    parser.finalize();
+    cb.print();
+#endif
 }
 
 } // namespace

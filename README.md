@@ -58,6 +58,12 @@ Library names may vary on other operating systems.
    cmake .. -DBUILD_PORTABLE=ON
    ```
 
+   On systems without thread support, disable the producer/consumer threads with:
+
+   ```bash
+   cmake .. -DZTAIL_USE_THREADS=OFF
+   ```
+
 4. **Build the Project:**
 
    ```bash
