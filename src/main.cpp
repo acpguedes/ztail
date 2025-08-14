@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
 
                 std::unique_ptr<ICompressor> comp;
                 if (det.type == CompressionType::GZIP) {
-                    comp = std::make_unique<CompressorZlib>(std::move(det.file), filename);
+                    comp = std::make_unique<CompressorZlib>(std::move(det.file), filename, options.zlibBufferSize);
                 } else if (det.type == CompressionType::BZIP2) {
                     comp = std::make_unique<CompressorBzip2>(std::move(det.file), filename);
                 } else if (det.type == CompressionType::XZ) {

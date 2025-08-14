@@ -12,7 +12,8 @@ struct GzCloser { void operator()(gzFile f) const { if (f) gzclose(f); } };
 
 class CompressorZlib : public ICompressor {
 public:
-    explicit CompressorZlib(FilePtr&& file, const std::string& filename);
+    explicit CompressorZlib(FilePtr&& file, const std::string& filename,
+                            size_t bufferSize = 1 << 20);
 
     // Reads the next chunk of decompressed data
     // Returns true while data is available, false on EOF
