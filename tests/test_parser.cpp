@@ -3,7 +3,7 @@
 #include "circular_buffer.h"
 
 TEST(ParserTest, ParseLines) {
-    CircularBuffer cb(5);
+    CircularBuffer cb(5, 16);
     Parser parser(cb);
 
     const char* data = "Line A\nLine B\nLine C\n";
@@ -18,7 +18,7 @@ TEST(ParserTest, ParseLines) {
 }
 
 TEST(ParserTest, ParseWithPartialLine) {
-    CircularBuffer cb(5);
+    CircularBuffer cb(5, 16);
     Parser parser(cb);
 
     const char* data = "Line A\nLine B";

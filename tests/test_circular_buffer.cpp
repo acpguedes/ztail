@@ -2,7 +2,7 @@
 #include "circular_buffer.h"
 
 TEST(CircularBufferTest, AddAndRetrieve) {
-    CircularBuffer cb(3);
+    CircularBuffer cb(3, 16);
     cb.add("Line 1");
     cb.add("Line 2");
     cb.add("Line 3");

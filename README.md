@@ -72,6 +72,7 @@ Library names may vary on other operating systems.
 
 ```bash
 ./ztail -n 2 file.gz
+./ztail -n 2 -c 1024 file.gz
 ./ztail -n 2 file.bgz
 ./ztail -n 2 file.bz2
 ./ztail -n 2 file.xz
@@ -83,6 +84,7 @@ Library names may vary on other operating systems.
 ```
 
 - **`-n N`, `--lines N`**: Display the last N lines (default = 10).
+- **`-c N`, `--line-capacity N`**: Pre-reserve N bytes for each line to reduce reallocations (default = 0).
 - **`file.gz`, `file.bgz`, `file.bz2`, `file.xz`, `file.zip`, or `file.zst`**: Name of the compressed file. The extension may be omitted because compression type is detected automatically.
 - **`-e <name>`, `--entry <name>`**: When reading a `.zip` file, select an entry inside the archive.
 - If no file is provided, **ztail** reads from standard input.
