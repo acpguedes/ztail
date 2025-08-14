@@ -92,6 +92,32 @@ Library names may vary on other operating systems.
 - **`-V`, `--version`**: Display program version and exit.
 - **`-h`, `--help`**: Display usage information and exit.
 
+## 💡 **Suggested Use Cases**
+
+1. **Quick inspection of huge files**
+   - *Problem:* Compressed files (`.gz`, `.bgz`, `.zip`) with tens or hundreds of gigabytes.
+   - *Reason:* Using `zcat | tail` forces a full read/decompression, which can take minutes or hours.
+   - *Where it's useful:* Server or application logs, database dumps exported with gzip, and large bioinformatics files (FASTQ, VCF) to verify integrity at the end.
+
+2. **Processing in I/O-limited environments**
+   - *Problem:* Slow storage (S3, NFS, spinning disks, high-latency networks).
+   - *Reason:* Less reading means less waiting time.
+   - *Where it's useful:* Cloud environments with per-read costs (e.g., S3 Glacier) and remote servers over SSH with restricted bandwidth.
+
+3. **Diagnostics in data pipelines**
+   - *Problem:* In ETL/ELT, often only the end of the file matters for debugging (last processed batch).
+   - *Reason:* Avoids processing unnecessary data and speeds up debugging.
+   - *Where it's useful:* Data pipeline CI/CD and near real-time ingestion monitoring.
+
+4. **Bioinformatics and scientific data**
+   - *Problem:* Sequencing files, simulation logs, and scientific time series tend to be enormous.
+   - *Reason:* The end often reveals the result of a batch or run.
+   - *Where it's useful:* Compressed FASTQ, BAM, VCF files and outputs from meteorological or computational physics simulators.
+
+5. **Compatibility and portability**
+   - Works like `tail` for compressed files without requiring complex tools like Spark, Hadoop, or Pandas.
+   - Can be integrated into existing shell scripts, including minimal Unix environments.
+
 ## 🧪 **Tests**
 
 Unit tests are located in the `tests/` directory. To run them:
