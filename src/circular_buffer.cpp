@@ -27,11 +27,23 @@ void CircularBuffer::add(std::string&& line) {
 }
 
 void CircularBuffer::print() const {
+    if (count == 0) {
+        return;
+    }
     size_t start = (next >= count) ? (next - count) : (capacity + next - count);
+    size_t totalLen = 0;
     for (size_t i = 0; i < count; ++i) {
         size_t idx = (start + i) % capacity;
-        std::cout << buffer[idx] << "\n";
+        totalLen += buffer[idx].size() + 1; // include newline
     }
+    std::string output;
+    output.reserve(totalLen);
+    for (size_t i = 0; i < count; ++i) {
+        size_t idx = (start + i) % capacity;
+        output.append(buffer[idx]);
+        output.push_back('\n');
+    }
+    std::cout.write(output.data(), static_cast<std::streamsize>(output.size()));
 }
 
 size_t CircularBuffer::memoryUsage() const {
