@@ -36,12 +36,18 @@ void CharRingBuffer::add(std::string&& line) {
 }
 
 void CharRingBuffer::print() const {
+    if (count == 0) {
+        return;
+    }
+    std::string output;
+    output.reserve(data.size() + count);
     for (size_t i = 0; i < count; ++i) {
         size_t start = offsets[i];
         size_t end = (i + 1 < count) ? offsets[i + 1] : data.size();
-        std::cout.write(&data[start], end - start);
-        std::cout.put('\n');
+        output.append(&data[start], end - start);
+        output.push_back('\n');
     }
+    std::cout.write(output.data(), static_cast<std::streamsize>(output.size()));
 }
 
 size_t CharRingBuffer::memoryUsage() const {
