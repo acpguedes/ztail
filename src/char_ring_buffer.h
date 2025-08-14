@@ -13,10 +13,13 @@ public:
     size_t memoryUsage() const;
 
 private:
-    std::vector<char> data;
-    std::vector<size_t> offsets; // start positions of lines within data
-    size_t capacity;
-    size_t count;
+    std::vector<char> data;             // underlying byte storage
+    std::vector<size_t> offsets;        // ring of line start positions
+    size_t capacity;                    // maximum number of lines
+    size_t start;                       // index of first byte in data
+    size_t end;                         // index one past the last byte
+    size_t offsetStart;                 // index of first entry in offsets
+    size_t count;                       // current number of lines
 };
 
 #endif // CHAR_RING_BUFFER_H
