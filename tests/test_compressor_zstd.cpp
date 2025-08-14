@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "compressor_zstd.h"
+#include "compression_type.h"
 #include <zstd.h>
 #include <fstream>
 
@@ -16,7 +17,9 @@ TEST(CompressorZstdTest, DecompressValidFile){
     const std::string filename = "test.zst";
     const std::string content = "Line1\nLine2\n";
     create_zst_file(filename, content);
-    CompressorZstd comp(filename);
+    DetectionResult det = detectCompressionType(filename);
+    ASSERT_EQ(det.type, CompressionType::ZSTD);
+    CompressorZstd comp(std::move(det.file), filename);
     std::vector<char> buf(1024);
     size_t n = 0;
     std::string out;
@@ -31,7 +34,8 @@ TEST(CompressorZstdTest, DecompressInvalidFile){
     const std::string filename = "bad.zst";
     std::ofstream ofs(filename); ofs << "bad"; ofs.close();
     EXPECT_THROW({
-        CompressorZstd c(filename);
+        DetectionResult det = detectCompressionType(filename);
+        CompressorZstd c(std::move(det.file), filename);
         std::vector<char> buf(32);
         size_t n = 0;
         c.decompress(buf, n);

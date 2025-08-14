@@ -6,16 +6,17 @@
 #include <zstd.h>
 #include <memory>
 #include "icompressor.h"
+#include "file_ptr.h"
 
 class CompressorZstd : public ICompressor {
 public:
-    explicit CompressorZstd(const std::string& filename);
+    explicit CompressorZstd(FilePtr&& file, const std::string& filename);
     ~CompressorZstd();
 
     bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
 
 private:
-    std::unique_ptr<FILE, decltype(&fclose)> file;
+    FilePtr file;
     std::unique_ptr<ZSTD_DStream, decltype(&ZSTD_freeDStream)> stream;
     std::vector<char> inBuffer;
     bool eof;

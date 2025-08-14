@@ -1,12 +1,19 @@
 #include "compressor_zip.h"
 #include <stdexcept>
+#include <unistd.h>
 
-CompressorZip::CompressorZip(const std::string& filename, const std::string& entryName)
+CompressorZip::CompressorZip(FilePtr&& file, const std::string& filename, const std::string& entryName)
     : za(nullptr, &zip_close), zf(nullptr, &zip_fclose), entry(entryName), eof(false), filename(filename)
 {
+    if (!file) {
+        throw std::runtime_error("libzip error (0) while opening '" + filename + "'");
+    }
+    std::fseek(file.get(), 0, SEEK_SET);
+    int fd = fileno(file.release());
     int zipError = 0;
-    za.reset(zip_open(filename.c_str(), ZIP_RDONLY, &zipError));
+    za.reset(zip_fdopen(fd, ZIP_RDONLY, &zipError));
     if (!za) {
+        ::close(fd);
         throw std::runtime_error("libzip error (" + std::to_string(zipError) + ") while opening '" + filename + "'");
     }
 

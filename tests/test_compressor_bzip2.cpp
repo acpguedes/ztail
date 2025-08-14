@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "compressor_bzip2.h"
+#include "compression_type.h"
 #include <bzlib.h>
 #include <cstdio>
 
@@ -22,7 +23,9 @@ TEST(CompressorBzip2Test, DecompressValidFile) {
 
     create_bz2_file(filename, content);
 
-    CompressorBzip2 compressor(filename);
+    DetectionResult det = detectCompressionType(filename);
+    ASSERT_EQ(det.type, CompressionType::BZIP2);
+    CompressorBzip2 compressor(std::move(det.file), filename);
     std::vector<char> buffer(1024);
     size_t bytesDecompressed = 0;
 
@@ -43,7 +46,8 @@ TEST(CompressorBzip2Test, DecompressInvalidFile) {
     fclose(f);
 
     EXPECT_THROW({
-        CompressorBzip2 compressor(filename);
+        DetectionResult det = detectCompressionType(filename);
+        CompressorBzip2 compressor(std::move(det.file), filename);
         std::vector<char> buffer(1024);
         size_t bytesDecompressed = 0;
 

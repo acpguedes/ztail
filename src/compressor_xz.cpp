@@ -1,24 +1,19 @@
 #include "compressor_xz.h"
-#include <fstream>
 #include <stdexcept>
 #include <cerrno>
 
-CompressorXz::CompressorXz(const std::string& filename)
-    : file(nullptr, &fclose), strm(LZMA_STREAM_INIT), eof(false), inBuffer(1 << 15), filename(filename)
+CompressorXz::CompressorXz(FilePtr&& file, const std::string& filename)
+    : file(std::move(file)), strm(LZMA_STREAM_INIT), eof(false), inBuffer(1 << 15), filename(filename)
 {
-    std::ifstream check(filename, std::ios::binary);
-    if (!check) {
+    if (!this->file) {
         throw std::runtime_error("lzma error (" + std::to_string(errno) + ") while opening '" + filename + "'");
     }
 
-    file.reset(fopen(filename.c_str(), "rb"));
-    if (!file) {
-        throw std::runtime_error("lzma error (" + std::to_string(errno) + ") while opening '" + filename + "'");
-    }
+    std::fseek(this->file.get(), 0, SEEK_SET);
 
     lzma_ret ret = lzma_stream_decoder(&strm, UINT64_MAX, 0);
     if (ret != LZMA_OK) {
-        file.reset();
+        this->file.reset();
         throw std::runtime_error("lzma error (" + std::to_string(ret) + ") while initializing '" + filename + "'");
     }
 }

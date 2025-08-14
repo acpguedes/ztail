@@ -1,24 +1,31 @@
 #include "compressor_zlib.h"
-#include <fstream>
 #include <stdexcept>
 #include <cerrno>
+#include <unistd.h>
 
-CompressorZlib::CompressorZlib(const std::string& filename)
+CompressorZlib::CompressorZlib(FilePtr&& file, const std::string& filename)
     : gz(nullptr), eof(false), filename(filename)
 {
-    std::ifstream check(filename, std::ios::binary);
-    if (!check) {
-        throw std::runtime_error("zlib error (" + std::to_string(errno) + ") while opening '" + filename + "'");
+    if (!file) {
+        throw std::runtime_error("zlib error (0) while opening '" + filename + "'");
     }
-
+    std::fseek(file.get(), 0, SEEK_SET);
     unsigned char header[2];
-    check.read(reinterpret_cast<char*>(header), 2);
-    if (check.gcount() != 2 || header[0] != 0x1f || header[1] != 0x8b) {
+    size_t n = std::fread(header, 1, 2, file.get());
+    if (n != 2 || header[0] != 0x1f || header[1] != 0x8b) {
         throw std::runtime_error("zlib error (0) invalid header in '" + filename + "'");
     }
-
-    gz.reset(gzopen(filename.c_str(), "rb"));
+    std::fseek(file.get(), 0, SEEK_SET);
+    int fd = fileno(file.get());
+    int dupfd = dup(fd);
+    file.reset();
+    if (dupfd == -1) {
+        throw std::runtime_error("zlib error (" + std::to_string(errno) + ") while duplicating descriptor for '" + filename + "'");
+    }
+    ::lseek(dupfd, 0, SEEK_SET);
+    gz.reset(gzdopen(dupfd, "rb"));
     if (!gz) {
+        ::close(dupfd);
         throw std::runtime_error("zlib error (" + std::to_string(errno) + ") while opening '" + filename + "'");
     }
 }
