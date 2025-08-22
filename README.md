@@ -1,4 +1,5 @@
 # ztail
+<img width="1024" height="1024" alt="ChatGPT Image 22 de ago  de 2025, 06_52_55" src="https://github.com/user-attachments/assets/a7459c72-132f-43d9-80ad-9f6e8ca02c4f" />
 
 **ztail** is an efficient command-line tool to display the last N lines of compressed `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, and `.zst` files. Designed for high performance, **ztail** is ideal for working with large compressed text files.
 
