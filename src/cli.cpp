@@ -14,6 +14,8 @@ void CLI::usage(const char* progName) {
         << "  -c, --line-capacity N : pre-reserve N bytes for each line\n"
         << "      --bytes-budget N : limit total bytes stored for lines\n"
         << "  -b, --zlib-buffer N : set zlib buffer size in bytes (default = 1048576)\n"
+        << "      --xz-buffer N   : set xz buffer size in bytes (default = 32768)\n"
+        << "      --zstd-window N : set max zstd window size in bytes (default = unlimited)\n"
         << "  -r, --read-buffer N : set read buffer size in bytes (default = 1048576)\n"
         << "  -e, --entry <name> : entry name inside zip archive\n"
         << "      --print-aggregation-threshold N : threshold in bytes for aggregated output (default = 8388608)\n"
@@ -36,6 +38,8 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
         {"line-capacity", required_argument, nullptr, 'c'},
         {"bytes-budget", required_argument, nullptr, 1001},
         {"zlib-buffer",   required_argument, nullptr, 'b'},
+        {"xz-buffer",     required_argument, nullptr, 1003},
+        {"zstd-window",   required_argument, nullptr, 1004},
         {"read-buffer",   required_argument, nullptr, 'r'},
         {"entry",         required_argument, nullptr, 'e'},
         {"print-aggregation-threshold", required_argument, nullptr, 1000},
@@ -83,6 +87,26 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
                                          std::to_string(std::numeric_limits<unsigned int>::max()));
             }
             options.zlibBufferSize = static_cast<size_t>(val);
+            break;
+        }
+        case 1003: {
+            char* end = nullptr;
+            errno = 0;
+            long val = std::strtol(optarg, &end, 10);
+            if (errno != 0 || end == optarg || *end != '\0' || val <= 0) {
+                throw std::runtime_error("--xz-buffer requires a positive integer");
+            }
+            options.xzBufferSize = static_cast<size_t>(val);
+            break;
+        }
+        case 1004: {
+            char* end = nullptr;
+            errno = 0;
+            long val = std::strtol(optarg, &end, 10);
+            if (errno != 0 || end == optarg || *end != '\0' || val < 0) {
+                throw std::runtime_error("--zstd-window requires a non-negative integer");
+            }
+            options.zstdWindowSize = static_cast<size_t>(val);
             break;
         }
         case 'r': {

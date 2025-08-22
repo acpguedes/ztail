@@ -11,6 +11,8 @@ struct CLIOptions {
     std::vector<std::string> filenames;   // Names of files to process
     std::string zipEntry;   // Optional entry name for zip files
     size_t zlibBufferSize = 1 << 20; // Buffer size for zlib operations
+    size_t xzBufferSize = 1 << 15;   // Buffer size for xz operations
+    size_t zstdWindowSize = 0;       // Max window size for zstd (0 = default)
     size_t readBufferSize = 1 << 20; // Buffer size for reading files
     size_t printAggregationThreshold = 8 * 1024 * 1024; // Threshold for block printing
     bool useThreads = true; // Enable producer/consumer threads

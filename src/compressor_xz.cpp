@@ -2,8 +2,8 @@
 #include <stdexcept>
 #include <cerrno>
 
-CompressorXz::CompressorXz(FilePtr&& file, const std::string& filename)
-    : file(std::move(file)), strm(LZMA_STREAM_INIT), eof(false), inBuffer(1 << 15), filename(filename)
+CompressorXz::CompressorXz(FilePtr&& file, const std::string& filename, size_t inBufferSize)
+    : file(std::move(file)), strm(LZMA_STREAM_INIT), eof(false), inBuffer(inBufferSize), filename(filename)
 {
     if (!this->file) {
         throw std::runtime_error("lzma error (" + std::to_string(errno) + ") while opening '" + filename + "'");

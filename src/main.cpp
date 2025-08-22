@@ -162,11 +162,11 @@ int main(int argc, char* argv[]) {
                 } else if (det.type == CompressionType::BZIP2) {
                     comp = std::make_unique<CompressorBzip2>(std::move(det.file), filename);
                 } else if (det.type == CompressionType::XZ) {
-                    comp = std::make_unique<CompressorXz>(std::move(det.file), filename);
+                    comp = std::make_unique<CompressorXz>(std::move(det.file), filename, options.xzBufferSize);
                 } else if (det.type == CompressionType::ZIP) {
                     comp = std::make_unique<CompressorZip>(std::move(det.file), filename, options.zipEntry);
                 } else if (det.type == CompressionType::ZSTD) {
-                    comp = std::make_unique<CompressorZstd>(std::move(det.file), filename);
+                    comp = std::make_unique<CompressorZstd>(std::move(det.file), filename, options.zstdWindowSize);
                 }
 
                 if (comp) {
