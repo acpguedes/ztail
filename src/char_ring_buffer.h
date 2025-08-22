@@ -26,7 +26,7 @@ public:
     // and counts toward the ring capacity.
     void end_line();
 
-    void print() const;
+    void print(size_t aggregationThreshold) const;
     size_t memoryUsage() const;
 
 private:

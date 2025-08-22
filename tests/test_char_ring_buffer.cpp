@@ -9,7 +9,7 @@ TEST(CharRingBufferTest, AddAndRetrieve) {
     cb.append_segment("Line 4", 6); cb.end_line(); // Overwrites "Line 1"
 
     testing::internal::CaptureStdout();
-    cb.print();
+    cb.print(1024);
     std::string output = testing::internal::GetCapturedStdout();
 
     std::string expected = "Line 2\nLine 3\nLine 4\n";
@@ -22,7 +22,7 @@ TEST(CharRingBufferTest, EmptyBuffer) {
     cb.append_segment("Line 2", 6); cb.end_line();
 
     testing::internal::CaptureStdout();
-    cb.print();
+    cb.print(1024);
     std::string output = testing::internal::GetCapturedStdout();
 
     EXPECT_EQ(output, "");
@@ -37,7 +37,7 @@ TEST(CharRingBufferTest, LargeBufferPromotesOffset) {
     cb.append_segment("A", 1); cb.end_line();
 
     testing::internal::CaptureStdout();
-    cb.print();
+    cb.print(1024);
     std::string output = testing::internal::GetCapturedStdout();
 
     EXPECT_EQ(output, "A\n");

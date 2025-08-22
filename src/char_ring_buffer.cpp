@@ -112,29 +112,82 @@ void CharRingBuffer<MaxBytes>::end_line() {
 }
 
 template <size_t MaxBytes>
-void CharRingBuffer<MaxBytes>::print() const {
+void CharRingBuffer<MaxBytes>::print(size_t aggregationThreshold) const {
     if (count == 0) {
         return;
     }
     const size_t dataCap = data.size();
-    std::string output;
-    output.reserve(dataCap + count);
-
+    size_t totalLen = 0;
     for (size_t i = 0; i < count; ++i) {
         size_t idx = (offsetStart + i) % capacity;
         size_t nextIdx = (i + 1 < count) ? (offsetStart + i + 1) % capacity : idx;
         Offset startPos = offsets[idx];
         Offset endPos = (i + 1 < count) ? offsets[nextIdx] : end;
-
         if (startPos <= endPos) {
-            output.append(&data[static_cast<size_t>(startPos)], static_cast<size_t>(endPos - startPos));
+            totalLen += static_cast<size_t>(endPos - startPos);
         } else {
-            output.append(&data[static_cast<size_t>(startPos)], dataCap - static_cast<size_t>(startPos));
-            output.append(&data[0], static_cast<size_t>(endPos));
+            totalLen += dataCap - static_cast<size_t>(startPos);
+            totalLen += static_cast<size_t>(endPos);
         }
-        output.push_back('\n');
+        totalLen += 1; // newline
     }
-    std::cout.write(output.data(), static_cast<std::streamsize>(output.size()));
+
+    if (totalLen <= aggregationThreshold) {
+        std::string output;
+        output.reserve(totalLen);
+        for (size_t i = 0; i < count; ++i) {
+            size_t idx = (offsetStart + i) % capacity;
+            size_t nextIdx = (i + 1 < count) ? (offsetStart + i + 1) % capacity : idx;
+            Offset startPos = offsets[idx];
+            Offset endPos = (i + 1 < count) ? offsets[nextIdx] : end;
+
+            if (startPos <= endPos) {
+                output.append(&data[static_cast<size_t>(startPos)], static_cast<size_t>(endPos - startPos));
+            } else {
+                output.append(&data[static_cast<size_t>(startPos)], dataCap - static_cast<size_t>(startPos));
+                output.append(&data[0], static_cast<size_t>(endPos));
+            }
+            output.push_back('\n');
+        }
+        std::cout.write(output.data(), static_cast<std::streamsize>(output.size()));
+    } else {
+        std::string block;
+        block.reserve(aggregationThreshold);
+        for (size_t i = 0; i < count; ++i) {
+            size_t idx = (offsetStart + i) % capacity;
+            size_t nextIdx = (i + 1 < count) ? (offsetStart + i + 1) % capacity : idx;
+            Offset startPos = offsets[idx];
+            Offset endPos = (i + 1 < count) ? offsets[nextIdx] : end;
+
+            auto append_segment_to_block = [&](const char* ptr, size_t len) {
+                if (block.size() + len > aggregationThreshold && !block.empty()) {
+                    std::cout.write(block.data(), static_cast<std::streamsize>(block.size()));
+                    block.clear();
+                }
+                if (len > aggregationThreshold) {
+                    std::cout.write(ptr, static_cast<std::streamsize>(len));
+                } else {
+                    block.append(ptr, len);
+                }
+            };
+
+            if (startPos <= endPos) {
+                append_segment_to_block(&data[static_cast<size_t>(startPos)], static_cast<size_t>(endPos - startPos));
+            } else {
+                append_segment_to_block(&data[static_cast<size_t>(startPos)], dataCap - static_cast<size_t>(startPos));
+                append_segment_to_block(&data[0], static_cast<size_t>(endPos));
+            }
+
+            if (block.size() + 1 > aggregationThreshold && !block.empty()) {
+                std::cout.write(block.data(), static_cast<std::streamsize>(block.size()));
+                block.clear();
+            }
+            block.push_back('\n');
+        }
+        if (!block.empty()) {
+            std::cout.write(block.data(), static_cast<std::streamsize>(block.size()));
+        }
+    }
 }
 
 template <size_t MaxBytes>

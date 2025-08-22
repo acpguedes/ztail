@@ -25,7 +25,7 @@
 namespace {
 
 template <typename Reader>
-void processStream(Reader reader, Parser& parser, CircularBuffer& cb, size_t bufferSize) {
+void processStream(Reader reader, Parser& parser, CircularBuffer& cb, size_t bufferSize, size_t aggregationThreshold) {
 #if ZTAIL_USE_THREADS
     std::vector<char> buffers[2] = {
         std::vector<char>(bufferSize),
@@ -74,7 +74,7 @@ void processStream(Reader reader, Parser& parser, CircularBuffer& cb, size_t buf
             }
         }
         parser.finalize();
-        cb.print();
+        cb.print(aggregationThreshold);
     });
 
     producer.join();
@@ -86,7 +86,7 @@ void processStream(Reader reader, Parser& parser, CircularBuffer& cb, size_t buf
         parser.parse(buf.data(), n);
     }
     parser.finalize();
-    cb.print();
+    cb.print(aggregationThreshold);
 #endif
 }
 
@@ -122,11 +122,11 @@ int main(int argc, char* argv[]) {
                         &](std::vector<char>& buf, size_t& n) {
                             return comp->decompress(buf, n);
                         },
-                        parser, cb, options.readBufferSize);
+                        parser, cb, options.readBufferSize, options.printAggregationThreshold);
                 } else {
                     det.file.reset();
                     tailPlainFile(filename, parser, options.n, options.readBufferSize);
-                    cb.print();
+                    cb.print(options.printAggregationThreshold);
                 }
             }
         } else {
@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
                     n = std::fread(buf.data(), 1, buf.size(), stdin);
                     return n > 0;
                 },
-                parser, cb, options.readBufferSize);
+                parser, cb, options.readBufferSize, options.printAggregationThreshold);
         }
     } catch (const std::exception& ex) {
         std::cerr << "ERROR: " << ex.what() << std::endl;

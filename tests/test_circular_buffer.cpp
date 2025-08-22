@@ -9,7 +9,7 @@ TEST(CircularBufferTest, AddAndRetrieve) {
     cb.add("Line 4"); // Overwrites "Line 1"
 
     testing::internal::CaptureStdout();
-    cb.print();
+    cb.print(1024);
     std::string output = testing::internal::GetCapturedStdout();
 
     std::string expected = "Line 2\nLine 3\nLine 4\n";
@@ -22,7 +22,7 @@ TEST(CircularBufferTest, EmptyBuffer) {
     cb.add("Line 2");
 
     testing::internal::CaptureStdout();
-    cb.print();
+    cb.print(1024);
     std::string output = testing::internal::GetCapturedStdout();
 
     EXPECT_EQ(output, "");
