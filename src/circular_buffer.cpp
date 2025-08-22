@@ -39,7 +39,7 @@ void CircularBuffer::end_line() {
     current_line.clear();
 }
 
-void CircularBuffer::print() const {
+void CircularBuffer::print(size_t aggregationThreshold) const {
     if (count == 0) {
         return;
     }
@@ -49,14 +49,37 @@ void CircularBuffer::print() const {
         size_t idx = (start + i) % capacity;
         totalLen += buffer[idx].size() + 1; // include newline
     }
-    std::string output;
-    output.reserve(totalLen);
-    for (size_t i = 0; i < count; ++i) {
-        size_t idx = (start + i) % capacity;
-        output.append(buffer[idx]);
-        output.push_back('\n');
+    if (totalLen <= aggregationThreshold) {
+        std::string output;
+        output.reserve(totalLen);
+        for (size_t i = 0; i < count; ++i) {
+            size_t idx = (start + i) % capacity;
+            output.append(buffer[idx]);
+            output.push_back('\n');
+        }
+        std::cout.write(output.data(), static_cast<std::streamsize>(output.size()));
+    } else {
+        std::string block;
+        block.reserve(aggregationThreshold);
+        for (size_t i = 0; i < count; ++i) {
+            size_t idx = (start + i) % capacity;
+            const std::string& line = buffer[idx];
+            if (block.size() + line.size() + 1 > aggregationThreshold && !block.empty()) {
+                std::cout.write(block.data(), static_cast<std::streamsize>(block.size()));
+                block.clear();
+            }
+            if (line.size() + 1 > aggregationThreshold) {
+                std::cout.write(line.data(), static_cast<std::streamsize>(line.size()));
+                std::cout.put('\n');
+            } else {
+                block.append(line);
+                block.push_back('\n');
+            }
+        }
+        if (!block.empty()) {
+            std::cout.write(block.data(), static_cast<std::streamsize>(block.size()));
+        }
     }
-    std::cout.write(output.data(), static_cast<std::streamsize>(output.size()));
 }
 
 size_t CircularBuffer::memoryUsage() const {

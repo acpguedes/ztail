@@ -15,6 +15,7 @@ void CLI::usage(const char* progName) {
         << "  -b, --zlib-buffer N : set zlib buffer size in bytes (default = 1048576)\n"
         << "  -r, --read-buffer N : set read buffer size in bytes (default = 1048576)\n"
         << "  -e, --entry <name> : entry name inside zip archive\n"
+        << "      --print-aggregation-threshold N : threshold in bytes for aggregated output (default = 8388608)\n"
         << "  -V, --version  : display program version and exit\n"
         << "  -h, --help     : display this help and exit\n"
         << "If no file is provided, the program reads from stdin.\n"
@@ -34,6 +35,7 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
         {"zlib-buffer",   required_argument, nullptr, 'b'},
         {"read-buffer",   required_argument, nullptr, 'r'},
         {"entry",         required_argument, nullptr, 'e'},
+        {"print-aggregation-threshold", required_argument, nullptr, 1000},
         {0, 0, 0, 0}
     };
 
@@ -92,6 +94,16 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
         case 'e':
             options.zipEntry = optarg;
             break;
+        case 1000: {
+            char* end = nullptr;
+            errno = 0;
+            long val = std::strtol(optarg, &end, 10);
+            if (errno != 0 || end == optarg || *end != '\0' || val < 0) {
+                throw std::runtime_error("--print-aggregation-threshold requires a non-negative integer");
+            }
+            options.printAggregationThreshold = static_cast<size_t>(val);
+            break;
+        }
         case '?':
         default:
             throw std::runtime_error("Unknown option");

@@ -10,7 +10,7 @@ TEST(ParserTest, ParseLines) {
     parser.parse(data, strlen(data));
 
     testing::internal::CaptureStdout();
-    cb.print();
+    cb.print(1024);
     std::string output = testing::internal::GetCapturedStdout();
 
     std::string expected = "Line A\nLine B\nLine C\n";
@@ -27,7 +27,7 @@ TEST(ParserTest, ParseWithPartialLine) {
     parser.finalize(); // Finalize to add partial lines
 
     testing::internal::CaptureStdout();
-    cb.print();
+    cb.print(1024);
     std::string output = testing::internal::GetCapturedStdout();
 
     std::string expected = "Line A\nLine B\n";

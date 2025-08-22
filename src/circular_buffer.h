@@ -18,7 +18,7 @@ public:
     void append_segment(const char* segment, size_t len);
     void end_line();
 
-    void print() const;
+    void print(size_t aggregationThreshold) const;
     size_t memoryUsage() const;
 
 private:
