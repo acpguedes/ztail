@@ -67,6 +67,8 @@ Library names may vary on other operating systems.
    cmake .. -DZTAIL_USE_THREADS=OFF
    ```
 
+   Threads can also be disabled at runtime with the `--no-threads` option.
+
    The high-performance CharRingBuffer backend is enabled by default. To use the previous
    std::string-based implementation for debugging, disable it with:
 
@@ -102,6 +104,7 @@ Library names may vary on other operating systems.
 - **`-n N`, `--lines N`**: Display the last N lines (default = 10).
 - **`-c N`, `--line-capacity N`**: Pre-reserve N bytes for each line to reduce reallocations (default = 0).
 - **`-r N`, `--read-buffer N`**: Set read buffer size in bytes (default = 1048576).
+- **`--no-threads`**: Disable producer/consumer threads.
 - **`file.gz`, `file.bgz`, `file.bz2`, `file.xz`, `file.zip`, or `file.zst`**: Name of the compressed file. The extension may be omitted because compression type is detected automatically.
 - **`-e <name>`, `--entry <name>`**: When reading a `.zip` file, select an entry inside the archive.
 - If no file is provided, **ztail** reads from standard input.
