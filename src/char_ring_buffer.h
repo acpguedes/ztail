@@ -4,9 +4,14 @@
 #include <vector>
 #include <string>
 #include <cstddef>
+#include <cstdint>
+#include <type_traits>
 
+template <size_t MaxBytes = UINT32_MAX>
 class CharRingBuffer {
 public:
+    using Offset = std::conditional_t<MaxBytes<=UINT32_MAX,uint32_t,uint64_t>;
+
     explicit CharRingBuffer(size_t capacity, size_t lineCapacity = 0);
 
     // Existing line based API
@@ -26,14 +31,14 @@ public:
 
 private:
     std::vector<char> data;             // underlying byte storage
-    std::vector<size_t> offsets;        // ring of line start positions
+    std::vector<Offset> offsets;        // ring of line start positions
     size_t capacity;                    // maximum number of lines
-    size_t start;                       // index of first byte in data
-    size_t end;                         // index one past the last byte
+    Offset start;                       // index of first byte in data
+    Offset end;                         // index one past the last byte
     size_t offsetStart;                 // index of first entry in offsets
     size_t count;                       // current number of lines
     bool lineInProgress;                // whether a line is being built
-    size_t currentLineStart;            // start offset of current line
+    Offset currentLineStart;            // start offset of current line
 };
 
 #endif // CHAR_RING_BUFFER_H

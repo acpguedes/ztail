@@ -2,7 +2,8 @@
 #include <iostream>
 #include <algorithm>
 
-CharRingBuffer::CharRingBuffer(size_t cap, size_t lineCapacity)
+template <size_t MaxBytes>
+CharRingBuffer<MaxBytes>::CharRingBuffer(size_t cap, size_t lineCapacity)
     : data(), offsets(cap), capacity(cap), start(0), end(0), offsetStart(0),
       count(0), lineInProgress(false), currentLineStart(0)
 {
@@ -11,12 +12,14 @@ CharRingBuffer::CharRingBuffer(size_t cap, size_t lineCapacity)
     }
 }
 
-void CharRingBuffer::add(std::string&& line) {
+template <size_t MaxBytes>
+void CharRingBuffer<MaxBytes>::add(std::string&& line) {
     append_segment(line.data(), line.size());
     end_line();
 }
 
-void CharRingBuffer::append_segment(const char* segment, size_t len) {
+template <size_t MaxBytes>
+void CharRingBuffer<MaxBytes>::append_segment(const char* segment, size_t len) {
     if (capacity == 0 || data.empty() || len == 0) {
         return;
     }
@@ -27,13 +30,15 @@ void CharRingBuffer::append_segment(const char* segment, size_t len) {
     }
 
     auto freeSpace = [&]() {
-        size_t used = (end >= start) ? end - start : dataCap - (start - end);
+        size_t s = static_cast<size_t>(start);
+        size_t e = static_cast<size_t>(end);
+        size_t used = (e >= s) ? e - s : dataCap - (s - e);
         return dataCap - used;
     };
 
     auto drop_oldest = [&]() {
         if (count == 0) return;
-        size_t second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
+        Offset second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
         start = second_start;
         offsetStart = (offsetStart + 1) % capacity;
         count--;
@@ -56,18 +61,20 @@ void CharRingBuffer::append_segment(const char* segment, size_t len) {
         return; // not enough space even after dropping
     }
 
-    if (end + len <= dataCap) {
-        std::copy(segment, segment + len, data.begin() + end);
-        end = (end + len) % dataCap;
+    size_t e = static_cast<size_t>(end);
+    if (e + len <= dataCap) {
+        std::copy(segment, segment + len, data.begin() + e);
+        end = static_cast<Offset>((e + len) % dataCap);
     } else {
-        size_t first_part = dataCap - end;
-        std::copy(segment, segment + first_part, data.begin() + end);
+        size_t first_part = dataCap - e;
+        std::copy(segment, segment + first_part, data.begin() + e);
         std::copy(segment + first_part, segment + len, data.begin());
-        end = len - first_part;
+        end = static_cast<Offset>(len - first_part);
     }
 }
 
-void CharRingBuffer::end_line() {
+template <size_t MaxBytes>
+void CharRingBuffer<MaxBytes>::end_line() {
     if (capacity == 0 || data.empty()) {
         lineInProgress = false;
         return;
@@ -76,7 +83,7 @@ void CharRingBuffer::end_line() {
     if (!lineInProgress) {
         while (count == capacity) {
             if (count == 0) break;
-            size_t second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
+            Offset second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
             start = second_start;
             offsetStart = (offsetStart + 1) % capacity;
             count--;
@@ -90,7 +97,7 @@ void CharRingBuffer::end_line() {
     }
 
     while (count == capacity) {
-        size_t second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
+        Offset second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
         start = second_start;
         offsetStart = (offsetStart + 1) % capacity;
         count--;
@@ -104,7 +111,8 @@ void CharRingBuffer::end_line() {
     lineInProgress = false;
 }
 
-void CharRingBuffer::print() const {
+template <size_t MaxBytes>
+void CharRingBuffer<MaxBytes>::print() const {
     if (count == 0) {
         return;
     }
@@ -115,21 +123,25 @@ void CharRingBuffer::print() const {
     for (size_t i = 0; i < count; ++i) {
         size_t idx = (offsetStart + i) % capacity;
         size_t nextIdx = (i + 1 < count) ? (offsetStart + i + 1) % capacity : idx;
-        size_t startPos = offsets[idx];
-        size_t endPos = (i + 1 < count) ? offsets[nextIdx] : end;
+        Offset startPos = offsets[idx];
+        Offset endPos = (i + 1 < count) ? offsets[nextIdx] : end;
 
         if (startPos <= endPos) {
-            output.append(&data[startPos], endPos - startPos);
+            output.append(&data[static_cast<size_t>(startPos)], static_cast<size_t>(endPos - startPos));
         } else {
-            output.append(&data[startPos], dataCap - startPos);
-            output.append(&data[0], endPos);
+            output.append(&data[static_cast<size_t>(startPos)], dataCap - static_cast<size_t>(startPos));
+            output.append(&data[0], static_cast<size_t>(endPos));
         }
         output.push_back('\n');
     }
     std::cout.write(output.data(), static_cast<std::streamsize>(output.size()));
 }
 
-size_t CharRingBuffer::memoryUsage() const {
-    return sizeof(CharRingBuffer) + data.size() * sizeof(char) + offsets.size() * sizeof(size_t);
+template <size_t MaxBytes>
+size_t CharRingBuffer<MaxBytes>::memoryUsage() const {
+    return sizeof(CharRingBuffer<MaxBytes>) + data.size() * sizeof(char) + offsets.size() * sizeof(Offset);
 }
+
+template class CharRingBuffer<UINT32_MAX>;
+template class CharRingBuffer<static_cast<size_t>(UINT32_MAX) + 1>;
 

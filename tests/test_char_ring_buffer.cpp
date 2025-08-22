@@ -27,3 +27,18 @@ TEST(CharRingBufferTest, EmptyBuffer) {
 
     EXPECT_EQ(output, "");
 }
+
+TEST(CharRingBufferTest, LargeBufferPromotesOffset) {
+    using BigBuffer = CharRingBuffer<static_cast<size_t>(UINT32_MAX) + 1>;
+    static_assert(sizeof(typename BigBuffer::Offset) == sizeof(uint64_t),
+                  "Offset should be 64-bit for large buffers");
+
+    BigBuffer cb(2, 1);
+    cb.append_segment("A", 1); cb.end_line();
+
+    testing::internal::CaptureStdout();
+    cb.print();
+    std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_EQ(output, "A\n");
+}
