@@ -25,7 +25,8 @@ else()
 endif()
 
 # Option to build portable binaries
-option(BUILD_PORTABLE "Build without native CPU optimizations" OFF)
+option(BUILD_PORTABLE "Build without CPU-specific optimizations" OFF)
+option(USE_NATIVE "Build with -march=native" OFF)
 option(USE_CHAR_RING_BUFFER "Use CharRingBuffer instead of std::string CircularBuffer" ON)
 option(ZTAIL_USE_THREADS "Enable producer/consumer threading" ON)
 
@@ -44,8 +45,10 @@ add_compile_options(
 
 if(BUILD_PORTABLE)
     add_compile_options(-mtune=generic)
-else()
+elseif(USE_NATIVE)
     add_compile_options(-march=native)
+else()
+    add_compile_options(-march=x86-64-v3)
 endif()
 
 if(ipo_supported)

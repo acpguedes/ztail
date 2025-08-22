@@ -54,12 +54,28 @@ Library names may vary on other operating systems.
    cmake .. -DBUILD_TESTING=ON
    ```
 
-   To generate a portable binary that avoids CPU-specific optimizations, enable the
-   `BUILD_PORTABLE` option:
+   By default, **ztail** compiles with `-march=x86-64-v3`, which targets most modern
+   x86-64 CPUs for a good balance of performance and portability.
 
-   ```bash
-   cmake .. -DBUILD_PORTABLE=ON
-   ```
+   - For maximum compatibility with older processors, enable the `BUILD_PORTABLE`
+     option:
+
+     ```bash
+     cmake .. -DBUILD_PORTABLE=ON
+     ```
+
+   - For the highest possible performance on the build machine, enable `USE_NATIVE`
+     to compile with `-march=native`:
+
+     ```bash
+     cmake .. -DUSE_NATIVE=ON
+     ```
+
+   Using `-march=native` can yield additional speedups by exploiting all CPU features
+   available on the host, but the resulting binary may not run on systems with
+   different processors. `-march=x86-64-v3` remains compatible with most modern
+   hardware, while `BUILD_PORTABLE` trades performance for compatibility with any
+   x86-64 CPU.
 
    On systems without thread support, disable the producer/consumer threads with:
 
