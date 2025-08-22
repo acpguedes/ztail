@@ -18,7 +18,9 @@ void CLI::usage(const char* progName) {
         << "  -V, --version  : display program version and exit\n"
         << "  -h, --help     : display this help and exit\n"
         << "If no file is provided, the program reads from stdin.\n"
-        << "Compression type is detected automatically.\n";
+        << "Compression type is detected automatically.\n"
+        << "CharRingBuffer backend is enabled by default. Build with -DUSE_CHAR_RING_BUFFER=OFF to\n"
+           "use the std::string-based buffer for debugging.\n";
 }
 
 CLIOptions CLI::parse(int argc, char* argv[]) {

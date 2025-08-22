@@ -9,6 +9,8 @@
 - **Automatic Detection:** Compression type is identified from file contents even when the extension is missing or wrong.
 - **High Performance:** Optimized for large files, avoiding unnecessary full decompressions.
 - **Intuitive Command-Line Interface:** Simple usage with flexible options.
+- **Efficient Ring Buffer:** Uses a CharRingBuffer backend by default. Build with `-DUSE_CHAR_RING_BUFFER=OFF` to
+  switch to the slower std::string-based buffer for debugging purposes.
 
 ## 📦 **Installation**
 
@@ -63,6 +65,13 @@ Library names may vary on other operating systems.
 
    ```bash
    cmake .. -DZTAIL_USE_THREADS=OFF
+   ```
+
+   The high-performance CharRingBuffer backend is enabled by default. To use the previous
+   std::string-based implementation for debugging, disable it with:
+
+   ```bash
+   cmake .. -DUSE_CHAR_RING_BUFFER=OFF
    ```
 
 4. **Build the Project:**

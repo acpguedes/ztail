@@ -26,8 +26,15 @@ endif()
 
 # Option to build portable binaries
 option(BUILD_PORTABLE "Build without native CPU optimizations" OFF)
-option(USE_CHAR_RING_BUFFER "Use CharRingBuffer instead of std::string CircularBuffer" OFF)
+option(USE_CHAR_RING_BUFFER "Use CharRingBuffer instead of std::string CircularBuffer" ON)
 option(ZTAIL_USE_THREADS "Enable producer/consumer threading" ON)
+
+# Display selected buffer backend
+if(USE_CHAR_RING_BUFFER)
+    message(STATUS "Using CharRingBuffer backend (default)")
+else()
+    message(STATUS "Using std::string CircularBuffer backend (debug)")
+endif()
 
 # Compiler Optimization Flags
 add_compile_options(
