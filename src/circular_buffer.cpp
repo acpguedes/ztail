@@ -58,6 +58,11 @@ void CircularBuffer::end_line() {
     current_line.clear();
 }
 
+void CircularBuffer::append_line(const char* line, size_t len) {
+    std::string tmp(line, len);
+    add(std::move(tmp));
+}
+
 void CircularBuffer::print(size_t aggregationThreshold) const {
     if (count == 0) {
         return;

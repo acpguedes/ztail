@@ -18,6 +18,9 @@ public:
     void append_segment(const char* segment, size_t len);
     void end_line();
 
+    // Append a complete line from raw bytes in a single step.
+    void append_line(const char* line, size_t len);
+
     void print(size_t aggregationThreshold) const;
     size_t memoryUsage() const;
 

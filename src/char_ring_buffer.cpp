@@ -1,6 +1,6 @@
 #include "char_ring_buffer.h"
 #include <iostream>
-#include <algorithm>
+#include <cstring>
 
 template <size_t MaxBytes>
 CharRingBuffer<MaxBytes>::CharRingBuffer(size_t cap, size_t lineCapacity, size_t bytesBudget)
@@ -59,12 +59,12 @@ void CharRingBuffer<MaxBytes>::add(std::string&& line) {
     Offset lineStart = end;
     size_t e = static_cast<size_t>(end);
     if (e + len <= dataCap) {
-        std::copy(line.data(), line.data() + len, data.begin() + e);
+        memcpy(&data[e], line.data(), len);
         end = static_cast<Offset>((e + len) % dataCap);
     } else {
         size_t first_part = dataCap - e;
-        std::copy(line.data(), line.data() + first_part, data.begin() + e);
-        std::copy(line.data() + first_part, line.data() + len, data.begin());
+        memcpy(&data[e], line.data(), first_part);
+        memcpy(&data[0], line.data() + first_part, len - first_part);
         end = static_cast<Offset>(len - first_part);
     }
 
@@ -123,14 +123,77 @@ void CharRingBuffer<MaxBytes>::append_segment(const char* segment, size_t len) {
 
     size_t e = static_cast<size_t>(end);
     if (e + len <= dataCap) {
-        std::copy(segment, segment + len, data.begin() + e);
+        memcpy(&data[e], segment, len);
         end = static_cast<Offset>((e + len) % dataCap);
     } else {
         size_t first_part = dataCap - e;
-        std::copy(segment, segment + first_part, data.begin() + e);
-        std::copy(segment + first_part, segment + len, data.begin());
+        memcpy(&data[e], segment, first_part);
+        memcpy(&data[0], segment + first_part, len - first_part);
         end = static_cast<Offset>(len - first_part);
     }
+}
+
+template <size_t MaxBytes>
+void CharRingBuffer<MaxBytes>::append_line(const char* line, size_t len) {
+    if (capacity == 0 || data.empty()) {
+        return;
+    }
+
+    const size_t dataCap = data.size();
+    if (len > dataCap) {
+        return; // line too large to fit
+    }
+
+    auto freeSpace = [&]() {
+        size_t s = static_cast<size_t>(start);
+        size_t e = static_cast<size_t>(end);
+        size_t used = (e >= s) ? e - s : dataCap - (s - e);
+        if (used == 0 && count > 0) {
+            used = dataCap;
+        }
+        return dataCap - used;
+    };
+
+    auto drop_oldest = [&]() {
+        if (count == 0) return;
+        Offset second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
+        start = second_start;
+        offsetStart = (offsetStart + 1) % capacity;
+        count--;
+    };
+
+    while (count == capacity) {
+        drop_oldest();
+    }
+
+    while (freeSpace() < len && count > 0) {
+        drop_oldest();
+    }
+
+    if (freeSpace() < len) {
+        return; // not enough space even after dropping
+    }
+
+    Offset lineStart = end;
+    size_t e = static_cast<size_t>(end);
+    if (e + len <= dataCap) {
+        if (len > 0) {
+            memcpy(&data[e], line, len);
+        }
+        end = static_cast<Offset>((e + len) % dataCap);
+    } else {
+        size_t first_part = dataCap - e;
+        memcpy(&data[e], line, first_part);
+        memcpy(&data[0], line + first_part, len - first_part);
+        end = static_cast<Offset>(len - first_part);
+    }
+
+    offsets[(offsetStart + count) % capacity] = lineStart;
+    if (count == 0) {
+        start = lineStart;
+    }
+    count++;
+    lineInProgress = false;
 }
 
 template <size_t MaxBytes>
