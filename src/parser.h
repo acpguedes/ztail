@@ -1,8 +1,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include <string>
 #include "circular_buffer.h"
+#include <cstddef>
 
 // The Parser is responsible for splitting incoming data into lines
 // (separated by '\n') and adding them to the CircularBuffer.
@@ -18,7 +18,9 @@ public:
 
 private:
     CircularBuffer& circularBuffer;
-    std::string partial;
+    static constexpr size_t RESIDUAL_SIZE = 4096;
+    char residual[RESIDUAL_SIZE];
+    size_t residualLen;
 };
 
 #endif // PARSER_H

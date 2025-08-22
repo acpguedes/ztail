@@ -1,12 +1,9 @@
 #include "parser.h"
-#include <cstring> // memchr
+#include <cstring> // memchr, memcpy
 
-Parser::Parser(CircularBuffer& cb, size_t lineCapacity)
-    : circularBuffer(cb)
+Parser::Parser(CircularBuffer& cb, size_t /*lineCapacity*/)
+    : circularBuffer(cb), residual(), residualLen(0)
 {
-    if (lineCapacity > 0) {
-        partial.reserve(lineCapacity);
-    }
 }
 
 void Parser::parse(const char* data, size_t size) {
@@ -15,35 +12,39 @@ void Parser::parse(const char* data, size_t size) {
         const char* start_ptr = data + pos;
         size_t remaining = size - pos;
 
-        // Look for '\n'
         const char* newline_ptr = static_cast<const char*>(
             memchr(start_ptr, '\n', remaining)
         );
 
         if (newline_ptr) {
-            // We found a newline
             size_t line_length = newline_ptr - start_ptr;
-            partial.append(start_ptr, line_length);
-
-            // Move the completed line into the CircularBuffer
-            circularBuffer.add(std::move(partial));
-            partial.clear();
-
-            // Skip the newline character
+            if (residualLen > 0) {
+                circularBuffer.append_segment(residual, residualLen);
+                residualLen = 0;
+            }
+            if (line_length > 0) {
+                circularBuffer.append_segment(start_ptr, line_length);
+            }
+            circularBuffer.end_line();
             pos += line_length + 1;
         } else {
-            // No newline found in the remaining chunk
-            // Append everything to the partial and exit the loop
-            partial.append(start_ptr, remaining);
+            size_t copy_len = remaining;
+            if (copy_len + residualLen > RESIDUAL_SIZE) {
+                copy_len = RESIDUAL_SIZE - residualLen;
+            }
+            if (copy_len > 0) {
+                memcpy(residual + residualLen, start_ptr, copy_len);
+                residualLen += copy_len;
+            }
             break;
         }
     }
 }
 
 void Parser::finalize() {
-    // If there's leftover data, treat it as a final line
-    if (!partial.empty()) {
-        circularBuffer.add(std::move(partial));
-        partial.clear();
+    if (residualLen > 0) {
+        circularBuffer.append_segment(residual, residualLen);
+        circularBuffer.end_line();
+        residualLen = 0;
     }
 }

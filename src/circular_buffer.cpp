@@ -3,13 +3,14 @@
 #include <iostream>
 
 CircularBuffer::CircularBuffer(size_t cap, size_t lineCapacity)
-    : buffer(cap), capacity(cap), next(0), count(0)
+    : buffer(cap), capacity(cap), next(0), count(0), current_line()
 {
     // Reserve initial capacity for each string when requested
     if (lineCapacity > 0) {
         for (auto& s : buffer) {
             s.reserve(lineCapacity);
         }
+        current_line.reserve(lineCapacity);
     }
 }
 
@@ -24,6 +25,18 @@ void CircularBuffer::add(std::string&& line) {
     if (count < capacity) {
         count++;
     }
+}
+
+void CircularBuffer::append_segment(const char* segment, size_t len) {
+    if (len == 0) {
+        return;
+    }
+    current_line.append(segment, len);
+}
+
+void CircularBuffer::end_line() {
+    add(std::move(current_line));
+    current_line.clear();
 }
 
 void CircularBuffer::print() const {

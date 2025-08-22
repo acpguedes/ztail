@@ -13,6 +13,11 @@ class CircularBuffer {
 public:
     explicit CircularBuffer(size_t capacity, size_t lineCapacity = 0);
     void add(std::string&& line);
+
+    // Streaming API compatible with CharRingBuffer
+    void append_segment(const char* segment, size_t len);
+    void end_line();
+
     void print() const;
     size_t memoryUsage() const;
 
@@ -21,6 +26,7 @@ private:
     size_t capacity;
     size_t next;
     size_t count;
+    std::string current_line;
 };
 
 #endif // USE_CHAR_RING_BUFFER

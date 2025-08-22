@@ -3,10 +3,10 @@
 
 TEST(CharRingBufferTest, AddAndRetrieve) {
     CharRingBuffer cb(3, 16);
-    cb.add("Line 1");
-    cb.add("Line 2");
-    cb.add("Line 3");
-    cb.add("Line 4"); // Overwrites "Line 1"
+    cb.append_segment("Line 1", 6); cb.end_line();
+    cb.append_segment("Line 2", 6); cb.end_line();
+    cb.append_segment("Line 3", 6); cb.end_line();
+    cb.append_segment("Line 4", 6); cb.end_line(); // Overwrites "Line 1"
 
     testing::internal::CaptureStdout();
     cb.print();
@@ -18,8 +18,8 @@ TEST(CharRingBufferTest, AddAndRetrieve) {
 
 TEST(CharRingBufferTest, EmptyBuffer) {
     CharRingBuffer cb(0);
-    cb.add("Line 1");
-    cb.add("Line 2");
+    cb.append_segment("Line 1", 6); cb.end_line();
+    cb.append_segment("Line 2", 6); cb.end_line();
 
     testing::internal::CaptureStdout();
     cb.print();
