@@ -82,3 +82,14 @@ TEST(CharRingBufferTest, OversizedLineIgnored) {
 
     EXPECT_EQ(output, "");
 }
+
+TEST(CharRingBufferTest, LazyAllocatesData) {
+    CharRingBuffer cb(3);
+    cb.add("Hi");
+
+    testing::internal::CaptureStdout();
+    cb.print(1024);
+    std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_EQ(output, "Hi\n");
+}
