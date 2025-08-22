@@ -16,12 +16,17 @@ CharRingBuffer<MaxBytes>::CharRingBuffer(size_t cap, size_t lineCapacity, size_t
 
 template <size_t MaxBytes>
 void CharRingBuffer<MaxBytes>::add(std::string&& line) {
-    if (capacity == 0 || data.empty()) {
+    if (capacity == 0) {
         return;
     }
 
-    const size_t dataCap = data.size();
     size_t len = line.size();
+    if (data.empty()) {
+        size_t perLine = len > 512 ? len : 512;
+        data.resize(capacity * perLine);
+    }
+
+    const size_t dataCap = data.size();
     if (len > dataCap) {
         return; // line too large to fit
     }
@@ -77,8 +82,13 @@ void CharRingBuffer<MaxBytes>::add(std::string&& line) {
 
 template <size_t MaxBytes>
 void CharRingBuffer<MaxBytes>::append_segment(const char* segment, size_t len) {
-    if (capacity == 0 || data.empty() || len == 0) {
+    if (capacity == 0 || len == 0) {
         return;
+    }
+
+    if (data.empty()) {
+        size_t perLine = len > 512 ? len : 512;
+        data.resize(capacity * perLine);
     }
 
     const size_t dataCap = data.size();
@@ -135,8 +145,13 @@ void CharRingBuffer<MaxBytes>::append_segment(const char* segment, size_t len) {
 
 template <size_t MaxBytes>
 void CharRingBuffer<MaxBytes>::append_line(const char* line, size_t len) {
-    if (capacity == 0 || data.empty()) {
+    if (capacity == 0) {
         return;
+    }
+
+    if (data.empty()) {
+        size_t perLine = len > 512 ? len : 512;
+        data.resize(capacity * perLine);
     }
 
     const size_t dataCap = data.size();
