@@ -2,8 +2,9 @@
 #include "circular_buffer.h"
 #include <iostream>
 
-CircularBuffer::CircularBuffer(size_t cap, size_t lineCapacity)
-    : buffer(cap), capacity(cap), next(0), count(0), current_line()
+CircularBuffer::CircularBuffer(size_t cap, size_t lineCapacity, size_t bytesBudget)
+    : buffer(cap), capacity(cap), next(0), count(0), current_line(),
+      bytesBudget(bytesBudget), currentBytes(0)
 {
     // Reserve initial capacity for each string when requested
     if (lineCapacity > 0) {
@@ -18,13 +19,31 @@ void CircularBuffer::add(std::string&& line) {
     if (capacity == 0) {
         return;
     }
-    // Move the line into the circular buffer
-    buffer[next].assign(std::move(line));
-    next = (next + 1) % capacity;
 
-    if (count < capacity) {
-        count++;
+    size_t len = line.size();
+    if (bytesBudget > 0) {
+        if (len > bytesBudget) {
+            return; // line too large to fit
+        }
+        while (count > 0 && currentBytes + len > bytesBudget) {
+            size_t oldest = (next + capacity - count) % capacity;
+            currentBytes -= buffer[oldest].size();
+            buffer[oldest].clear();
+            count--;
+        }
     }
+
+    if (count == capacity) {
+        size_t oldest = next;
+        currentBytes -= buffer[oldest].size();
+        buffer[oldest].clear();
+        count--;
+    }
+
+    currentBytes += len;
+    buffer[next] = std::move(line);
+    next = (next + 1) % capacity;
+    count++;
 }
 
 void CircularBuffer::append_segment(const char* segment, size_t len) {

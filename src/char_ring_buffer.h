@@ -12,7 +12,7 @@ class CharRingBuffer {
 public:
     using Offset = std::conditional_t<MaxBytes<=UINT32_MAX,uint32_t,uint64_t>;
 
-    explicit CharRingBuffer(size_t capacity, size_t lineCapacity = 0);
+    explicit CharRingBuffer(size_t capacity, size_t lineCapacity = 0, size_t bytesBudget = 0);
 
     // Existing line based API
     void add(std::string&& line);

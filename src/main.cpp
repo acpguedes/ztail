@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
 
         if (!options.filenames.empty()) {
             for (const auto& filename : options.filenames) {
-                CircularBuffer cb(options.n, options.lineCapacity);
+                CircularBuffer cb(options.n, options.lineCapacity, options.bytesBudget);
                 Parser parser(cb, options.lineCapacity);
 
                 DetectionResult det = detectCompressionType(filename);
@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
                 }
             }
         } else {
-            CircularBuffer cb(options.n, options.lineCapacity);
+            CircularBuffer cb(options.n, options.lineCapacity, options.bytesBudget);
             Parser parser(cb, options.lineCapacity);
             processStream([
                 &](std::vector<char>& buf, size_t& n) {
