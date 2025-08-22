@@ -13,6 +13,7 @@ struct CLIOptions {
     size_t zlibBufferSize = 1 << 20; // Buffer size for zlib operations
     size_t readBufferSize = 1 << 20; // Buffer size for reading files
     size_t printAggregationThreshold = 8 * 1024 * 1024; // Threshold for block printing
+    bool useThreads = true; // Enable producer/consumer threads
 };
 
 class CLI {

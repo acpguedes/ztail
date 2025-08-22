@@ -17,6 +17,7 @@ void CLI::usage(const char* progName) {
         << "  -r, --read-buffer N : set read buffer size in bytes (default = 1048576)\n"
         << "  -e, --entry <name> : entry name inside zip archive\n"
         << "      --print-aggregation-threshold N : threshold in bytes for aggregated output (default = 8388608)\n"
+        << "      --no-threads   : disable producer/consumer threading\n"
         << "  -V, --version  : display program version and exit\n"
         << "  -h, --help     : display this help and exit\n"
         << "If no file is provided, the program reads from stdin.\n"
@@ -38,6 +39,7 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
         {"read-buffer",   required_argument, nullptr, 'r'},
         {"entry",         required_argument, nullptr, 'e'},
         {"print-aggregation-threshold", required_argument, nullptr, 1000},
+        {"no-threads",    no_argument,       nullptr, 1002},
         {0, 0, 0, 0}
     };
 
@@ -116,6 +118,9 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
             options.bytesBudget = static_cast<size_t>(val);
             break;
         }
+        case 1002:
+            options.useThreads = false;
+            break;
         case '?':
         default:
             throw std::runtime_error("Unknown option");
