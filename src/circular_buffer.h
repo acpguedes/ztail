@@ -6,7 +6,7 @@
 
 #ifdef USE_CHAR_RING_BUFFER
 #include "char_ring_buffer.h"
-using CircularBuffer = CharRingBuffer;
+using CircularBuffer = CharRingBuffer<>;
 #else
 
 class CircularBuffer {
