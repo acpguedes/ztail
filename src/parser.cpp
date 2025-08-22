@@ -21,11 +21,13 @@ void Parser::parse(const char* data, size_t size) {
             if (residualLen > 0) {
                 circularBuffer.append_segment(residual, residualLen);
                 residualLen = 0;
+                if (line_length > 0) {
+                    circularBuffer.append_segment(start_ptr, line_length);
+                }
+                circularBuffer.end_line();
+            } else {
+                circularBuffer.append_line(start_ptr, line_length);
             }
-            if (line_length > 0) {
-                circularBuffer.append_segment(start_ptr, line_length);
-            }
-            circularBuffer.end_line();
             pos += line_length + 1;
         } else {
             size_t copy_len = remaining;

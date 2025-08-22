@@ -22,6 +22,10 @@ public:
     // it implicitly starts that line.
     void append_segment(const char* segment, size_t len);
 
+    // Append a complete line from raw bytes.  The bytes are copied directly
+    // into the ring buffer and the line is finalized in a single step.
+    void append_line(const char* line, size_t len);
+
     // Mark the end of the current line.  The line becomes visible to print()
     // and counts toward the ring capacity.
     void end_line();

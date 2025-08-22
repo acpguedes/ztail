@@ -16,6 +16,21 @@ TEST(CharRingBufferTest, AddAndRetrieve) {
     EXPECT_EQ(output, expected);
 }
 
+TEST(CharRingBufferTest, AppendLine) {
+    CharRingBuffer cb(3, 16);
+    cb.append_line("Line 1", 6);
+    cb.append_line("Line 2", 6);
+    cb.append_line("Line 3", 6);
+    cb.append_line("Line 4", 6);
+
+    testing::internal::CaptureStdout();
+    cb.print(1024);
+    std::string output = testing::internal::GetCapturedStdout();
+
+    std::string expected = "Line 2\nLine 3\nLine 4\n";
+    EXPECT_EQ(output, expected);
+}
+
 TEST(CharRingBufferTest, EmptyBuffer) {
     CharRingBuffer cb(0);
     cb.append_segment("Line 1", 6); cb.end_line();
