@@ -11,7 +11,7 @@ void CLI::usage(const char* progName) {
     std::cerr
         << "Usage: " << progName << " [options] <files...>\n"
         << "  -n, --lines N   : print the last N lines (default = 10)\n"
-        << "  -c, --line-capacity N : pre-reserve N bytes for each line\n"
+        << "  -c, --line-capacity N : pre-reserve N bytes for each line (default = 512)\n"
         << "      --bytes-budget N : limit total bytes stored for lines\n"
         << "  -b, --zlib-buffer N : set zlib buffer size in bytes (default = 1048576)\n"
         << "      --xz-buffer N   : set xz buffer size in bytes (default = 32768)\n"
