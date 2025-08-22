@@ -11,7 +11,7 @@
 
 class CompressorXz : public ICompressor {
 public:
-    explicit CompressorXz(FilePtr&& file, const std::string& filename);
+    explicit CompressorXz(FilePtr&& file, const std::string& filename, size_t inBufferSize = 1 << 15);
     ~CompressorXz();
 
     // Reads the next chunk of decompressed data

@@ -1,8 +1,9 @@
 #include "compressor_zstd.h"
 #include <stdexcept>
 #include <cerrno>
+#include <cmath>
 
-CompressorZstd::CompressorZstd(FilePtr&& file, const std::string& filename)
+CompressorZstd::CompressorZstd(FilePtr&& file, const std::string& filename, size_t windowSize)
     : file(std::move(file)), stream(nullptr, &ZSTD_freeDStream), inBuffer(ZSTD_DStreamInSize()), eof(false), filename(filename)
 {
     if (!this->file) {
@@ -13,6 +14,15 @@ CompressorZstd::CompressorZstd(FilePtr&& file, const std::string& filename)
     if (!stream) {
         this->file.reset();
         throw std::runtime_error("zstd error (0) while creating stream for '" + filename + "'");
+    }
+    if (windowSize > 0) {
+        int windowLog = static_cast<int>(std::log2(static_cast<double>(windowSize)));
+        size_t wret = ZSTD_DCtx_setParameter(stream.get(), ZSTD_d_windowLogMax, windowLog);
+        if (ZSTD_isError(wret)) {
+            stream.reset();
+            this->file.reset();
+            throw std::runtime_error("zstd error (" + std::to_string(static_cast<int>(wret)) + ") while setting window size for '" + filename + "'");
+        }
     }
     size_t ret = ZSTD_initDStream(stream.get());
     if (ZSTD_isError(ret)) {

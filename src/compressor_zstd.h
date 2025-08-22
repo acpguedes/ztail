@@ -10,7 +10,7 @@
 
 class CompressorZstd : public ICompressor {
 public:
-    explicit CompressorZstd(FilePtr&& file, const std::string& filename);
+    explicit CompressorZstd(FilePtr&& file, const std::string& filename, size_t windowSize = 0);
     ~CompressorZstd();
 
     bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
