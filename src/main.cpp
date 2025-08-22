@@ -148,6 +148,9 @@ int main(int argc, char* argv[]) {
     std::cout.tie(nullptr);
     try {
         CLIOptions options = CLI::parse(argc, argv);
+        if (options.lineCapacity == 0) {
+            std::cerr << "WARNING: line capacity is 0; no buffer will be preallocated for lines" << std::endl;
+        }
 
         if (!options.filenames.empty()) {
             for (const auto& filename : options.filenames) {

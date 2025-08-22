@@ -118,7 +118,7 @@ Library names may vary on other operating systems.
 ```
 
 - **`-n N`, `--lines N`**: Display the last N lines (default = 10).
-- **`-c N`, `--line-capacity N`**: Pre-reserve N bytes for each line to reduce reallocations (default = 0).
+- **`-c N`, `--line-capacity N`**: Pre-reserve N bytes for each line to reduce reallocations (default = 512).
 - **`-b N`, `--zlib-buffer N`**: Set zlib buffer size in bytes (default = 1048576).
 - **`--xz-buffer N`**: Set xz buffer size in bytes (default = 32768).
 - **`--zstd-window N`**: Set maximum zstd window size in bytes (default = unlimited).
