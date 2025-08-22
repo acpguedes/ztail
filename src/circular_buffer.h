@@ -11,7 +11,7 @@ using CircularBuffer = CharRingBuffer<>;
 
 class CircularBuffer {
 public:
-    explicit CircularBuffer(size_t capacity, size_t lineCapacity = 0);
+    explicit CircularBuffer(size_t capacity, size_t lineCapacity = 0, size_t bytesBudget = 0);
     void add(std::string&& line);
 
     // Streaming API compatible with CharRingBuffer
@@ -27,6 +27,8 @@ private:
     size_t next;
     size_t count;
     std::string current_line;
+    size_t bytesBudget;
+    size_t currentBytes;
 };
 
 #endif // USE_CHAR_RING_BUFFER

@@ -12,6 +12,7 @@ void CLI::usage(const char* progName) {
         << "Usage: " << progName << " [options] <files...>\n"
         << "  -n, --lines N   : print the last N lines (default = 10)\n"
         << "  -c, --line-capacity N : pre-reserve N bytes for each line\n"
+        << "      --bytes-budget N : limit total bytes stored for lines\n"
         << "  -b, --zlib-buffer N : set zlib buffer size in bytes (default = 1048576)\n"
         << "  -r, --read-buffer N : set read buffer size in bytes (default = 1048576)\n"
         << "  -e, --entry <name> : entry name inside zip archive\n"
@@ -32,6 +33,7 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
         {"version",       no_argument,       nullptr, 'V'},
         {"lines",         required_argument, nullptr, 'n'},
         {"line-capacity", required_argument, nullptr, 'c'},
+        {"bytes-budget", required_argument, nullptr, 1001},
         {"zlib-buffer",   required_argument, nullptr, 'b'},
         {"read-buffer",   required_argument, nullptr, 'r'},
         {"entry",         required_argument, nullptr, 'e'},
@@ -102,6 +104,16 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
                 throw std::runtime_error("--print-aggregation-threshold requires a non-negative integer");
             }
             options.printAggregationThreshold = static_cast<size_t>(val);
+            break;
+        }
+        case 1001: {
+            char* end = nullptr;
+            errno = 0;
+            long val = std::strtol(optarg, &end, 10);
+            if (errno != 0 || end == optarg || *end != '\0' || val < 0) {
+                throw std::runtime_error("--bytes-budget requires a non-negative integer");
+            }
+            options.bytesBudget = static_cast<size_t>(val);
             break;
         }
         case '?':

@@ -42,3 +42,28 @@ TEST(CharRingBufferTest, LargeBufferPromotesOffset) {
 
     EXPECT_EQ(output, "A\n");
 }
+
+TEST(CharRingBufferTest, RespectsBytesBudget) {
+    CharRingBuffer cb(10, 0, 16);
+    cb.add("12345678");
+    cb.add("abcdefgh");
+    cb.add("ijkl");
+
+    testing::internal::CaptureStdout();
+    cb.print(1024);
+    std::string output = testing::internal::GetCapturedStdout();
+
+    std::string expected = "abcdefgh\nijkl\n";
+    EXPECT_EQ(output, expected);
+}
+
+TEST(CharRingBufferTest, OversizedLineIgnored) {
+    CharRingBuffer cb(10, 0, 16);
+    cb.add("This line is way too long to fit in the budget");
+
+    testing::internal::CaptureStdout();
+    cb.print(1024);
+    std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_EQ(output, "");
+}
