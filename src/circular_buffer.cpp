@@ -55,12 +55,11 @@ void CircularBuffer::append_segment(const char* segment, size_t len) {
 
 void CircularBuffer::end_line() {
     add(std::move(current_line));
-    current_line.clear();
+    current_line = std::string{};
 }
 
 void CircularBuffer::append_line(const char* line, size_t len) {
-    std::string tmp(line, len);
-    add(std::move(tmp));
+    add(std::string(line, len));
 }
 
 void CircularBuffer::print(size_t aggregationThreshold) const {

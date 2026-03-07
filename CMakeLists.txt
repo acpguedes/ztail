@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Project Name and Version
-project(ztail VERSION 1.0 LANGUAGES CXX)
+project(ztail VERSION 1.1 LANGUAGES CXX)
 
 # Export version information to the compiler so it can be queried at runtime
 add_compile_definitions(ZTAIL_VERSION="${PROJECT_VERSION}")
@@ -148,6 +148,7 @@ set(ZTAIL_LIB_SOURCES
     src/compressor_zip.cpp
     src/compressor_zstd.cpp
     src/compression_type.cpp
+    src/compressor_factory.cpp
     src/tail_plain.cpp
     src/parser.cpp
 )
@@ -213,6 +214,8 @@ if(BUILD_TESTING)
         tests/test_parser.cpp
         tests/test_detection.cpp
         tests/test_cli.cpp
+        tests/test_cli_extended.cpp
+        tests/test_compression_type_name.cpp
         src/main.cpp
     )
     if(ZTAIL_ENABLE_TAR AND LIBARCHIVE_FOUND)

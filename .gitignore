@@ -1,4 +1,9 @@
-build
-build/*
-_old
-_old/*
+build/
+_old/
+*.o
+*.a
+*.so
+*.dylib
+cmake-build-*/
+.cache/
+compile_commands.json

@@ -74,7 +74,7 @@ void CLI::usage(const char* progName) {
         << "|plain)\n"
         << "      --print-aggregation-threshold N : threshold in bytes for aggregated output (default = 8388608)\n"
         << "      --no-threads   : disable producer/consumer threading\n"
-        << "      --quiet-headers : suppress file headers in multi-file mode\n"
+        << "  -q, --quiet-headers : suppress file headers in multi-file mode\n"
         << "      --always-headers: always print file headers, even for one file\n"
         << "  -V, --version  : display program version and exit\n"
         << "  -h, --help     : display this help and exit\n"
@@ -101,13 +101,13 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
         {"format",        required_argument, nullptr, 'f'},
         {"print-aggregation-threshold", required_argument, nullptr, 1000},
         {"no-threads",    no_argument,       nullptr, 1002},
-        {"quiet-headers", no_argument,       nullptr, 1007},
+        {"quiet-headers", no_argument,       nullptr, 'q'},
         {"always-headers", no_argument,      nullptr, 1008},
         {0, 0, 0, 0}
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "hn:c:b:r:e:f:V", long_opts, nullptr)) != -1) {
+    while ((opt = getopt_long(argc, argv, "hn:c:b:r:e:f:qV", long_opts, nullptr)) != -1) {
         switch (opt) {
         case 'h':
             CLI::usage(argv[0]);
@@ -172,7 +172,7 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
         case 1006:
             options.listEntries = true;
             break;
-        case 1007:
+        case 'q':
             options.multiFileHeaders = false;
             options.alwaysShowHeaders = false;
             break;

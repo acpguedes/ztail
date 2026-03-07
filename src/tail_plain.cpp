@@ -1,46 +1,74 @@
 #include "tail_plain.h"
-#include <fstream>
 #include <algorithm>
+#include <cstdio>
+#include <cstring>
 #include <stdexcept>
+#include <vector>
+#if defined(__linux__)
+#include <fcntl.h>
+#endif
 
 void tailPlainFile(const std::string& filename, Parser& parser, size_t n, size_t bufferSize) {
-    std::ifstream file(filename, std::ios::binary);
-    if (!file) {
+    FILE* f = std::fopen(filename.c_str(), "rb");
+    if (!f) {
         throw std::runtime_error("Failed to open file: " + filename);
     }
 
-    file.seekg(0, std::ios::end);
-    std::streamoff fileSize = file.tellg();
+#if defined(__linux__)
+    {
+        int fd = fileno(f);
+        if (fd >= 0) {
+            posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+        }
+    }
+#endif
+
+    std::fseek(f, 0, SEEK_END);
+    long fileSize = std::ftell(f);
     if (fileSize <= 0) {
+        std::fclose(f);
         parser.finalize();
         return;
     }
 
     // Phase 1: Scan backward to find the start offset containing at least n+1 newlines
     // (n+1 because the last line may not end with \n)
-    std::string chunk(bufferSize, '\0');
+    std::vector<char> chunk(bufferSize);
     size_t lines = 0;
-    std::streamoff remaining = fileSize;
-    std::streamoff startOffset = fileSize;
+    long remaining = fileSize;
+    long startOffset = fileSize;
 
     while (remaining > 0 && lines <= n) {
-        size_t toRead = static_cast<size_t>(std::min<std::streamoff>(bufferSize, remaining));
-        remaining -= static_cast<std::streamoff>(toRead);
-        file.seekg(remaining, std::ios::beg);
-        file.read(&chunk[0], static_cast<std::streamsize>(toRead));
-        lines += static_cast<size_t>(std::count(chunk.begin(), chunk.begin() + static_cast<std::ptrdiff_t>(toRead), '\n'));
+        size_t toRead = static_cast<size_t>(std::min<long>(static_cast<long>(bufferSize), remaining));
+        remaining -= static_cast<long>(toRead);
+        std::fseek(f, remaining, SEEK_SET);
+        size_t got = std::fread(chunk.data(), 1, toRead, f);
+
+        // Count newlines using memchr (faster than std::count via SIMD in libc)
+        const char* p = chunk.data();
+        size_t left = got;
+        while (left > 0) {
+            const char* nl = static_cast<const char*>(std::memchr(p, '\n', left));
+            if (!nl) break;
+            ++lines;
+            size_t advance = static_cast<size_t>(nl - p) + 1;
+            p += advance;
+            left -= advance;
+        }
         startOffset = remaining;
     }
 
     // Phase 2: Read forward from startOffset and parse sequentially
-    file.seekg(startOffset, std::ios::beg);
-    std::streamoff pos = startOffset;
+    std::fseek(f, startOffset, SEEK_SET);
+    long pos = startOffset;
     while (pos < fileSize) {
-        size_t toRead = static_cast<size_t>(std::min<std::streamoff>(bufferSize, fileSize - pos));
-        file.read(&chunk[0], static_cast<std::streamsize>(toRead));
-        parser.parse(chunk.data(), toRead);
-        pos += static_cast<std::streamoff>(toRead);
+        size_t toRead = static_cast<size_t>(std::min<long>(static_cast<long>(bufferSize), fileSize - pos));
+        size_t got = std::fread(chunk.data(), 1, toRead, f);
+        if (got == 0) break;
+        parser.parse(chunk.data(), got);
+        pos += static_cast<long>(got);
     }
 
+    std::fclose(f);
     parser.finalize();
 }

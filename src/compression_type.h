@@ -23,6 +23,7 @@ struct DetectionResult {
 
 [[nodiscard]] DetectionResult detectCompressionType(const std::string& filename);
 [[nodiscard]] CompressionType detectCompressionTypeFromBytes(const unsigned char* bytes, size_t len);
+[[nodiscard]] const char* compressionTypeName(CompressionType type);
 
 void listZipEntries(const std::string& filename);
 void listTarEntries(const std::string& filename);
