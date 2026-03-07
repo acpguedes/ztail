@@ -2,7 +2,7 @@
 #include <stdexcept>
 #include <cerrno>
 
-CompressorXz::CompressorXz(FilePtr&& file, const std::string& filename, size_t inBufferSize)
+CompressorXz::CompressorXz(FilePtr&& file, const std::string& filename, size_t inBufferSize, size_t memLimit)
     : file(std::move(file)), strm(LZMA_STREAM_INIT), eof(false), inBuffer(inBufferSize), filename(filename)
 {
     if (!this->file) {
@@ -11,7 +11,8 @@ CompressorXz::CompressorXz(FilePtr&& file, const std::string& filename, size_t i
 
     std::fseek(this->file.get(), 0, SEEK_SET);
 
-    lzma_ret ret = lzma_stream_decoder(&strm, UINT64_MAX, 0);
+    uint64_t limit = (memLimit > 0) ? static_cast<uint64_t>(memLimit) : UINT64_MAX;
+    lzma_ret ret = lzma_stream_decoder(&strm, limit, 0);
     if (ret != LZMA_OK) {
         this->file.reset();
         throw std::runtime_error("lzma error (" + std::to_string(ret) + ") while initializing '" + filename + "'");

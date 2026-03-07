@@ -11,12 +11,12 @@
 
 class CompressorXz : public ICompressor {
 public:
-    explicit CompressorXz(FilePtr&& file, const std::string& filename, size_t inBufferSize = 1 << 15);
-    ~CompressorXz();
+    explicit CompressorXz(FilePtr&& file, const std::string& filename,
+                          size_t inBufferSize = 1 << 17,
+                          size_t memLimit = 256 * 1024 * 1024);
+    ~CompressorXz() noexcept;
 
-    // Reads the next chunk of decompressed data
-    // Returns true while data is available, false on EOF
-    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
+    [[nodiscard]] bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
 
 private:
     FilePtr file;

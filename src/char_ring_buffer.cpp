@@ -15,198 +15,110 @@ CharRingBuffer<MaxBytes>::CharRingBuffer(size_t cap, size_t lineCapacity, size_t
 }
 
 template <size_t MaxBytes>
-void CharRingBuffer<MaxBytes>::add(std::string&& line) {
-    if (capacity == 0) {
-        return;
-    }
-
-    size_t len = line.size();
+void CharRingBuffer<MaxBytes>::ensureStorage(size_t hint) {
     if (data.empty()) {
-        size_t perLine = len > 512 ? len : 512;
+        size_t perLine = hint > 512 ? hint : 512;
         data.resize(capacity * perLine);
     }
+}
 
+template <size_t MaxBytes>
+size_t CharRingBuffer<MaxBytes>::freeSpace() const {
     const size_t dataCap = data.size();
-    if (len > dataCap) {
-        return; // line too large to fit
+    size_t s = static_cast<size_t>(start);
+    size_t e = static_cast<size_t>(end);
+    size_t used = (e >= s) ? e - s : dataCap - (s - e);
+    if (used == 0 && count > 0) {
+        used = dataCap;
     }
+    return dataCap - used;
+}
 
-    auto freeSpace = [&]() {
-        size_t s = static_cast<size_t>(start);
-        size_t e = static_cast<size_t>(end);
-        size_t used = (e >= s) ? e - s : dataCap - (s - e);
-        if (used == 0 && count > 0) {
-            used = dataCap;
-        }
-        return dataCap - used;
-    };
+template <size_t MaxBytes>
+void CharRingBuffer<MaxBytes>::dropOldest() {
+    if (count == 0) return;
+    Offset second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
+    start = second_start;
+    offsetStart = (offsetStart + 1) % capacity;
+    count--;
+}
 
-    auto drop_oldest = [&]() {
-        if (count == 0) return;
-        Offset second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
-        start = second_start;
-        offsetStart = (offsetStart + 1) % capacity;
-        count--;
-    };
-
-    while (count == capacity) {
-        drop_oldest();
-    }
-
-    while (freeSpace() < len && count > 0) {
-        drop_oldest();
-    }
-
-    if (freeSpace() < len) {
-        return; // not enough space even after dropping
-    }
-
-    Offset lineStart = end;
+template <size_t MaxBytes>
+void CharRingBuffer<MaxBytes>::copyToRing(const char* src, size_t len) {
+    const size_t dataCap = data.size();
     size_t e = static_cast<size_t>(end);
     if (e + len <= dataCap) {
-        memcpy(&data[e], line.data(), len);
+        if (len > 0) {
+            memcpy(&data[e], src, len);
+        }
         end = static_cast<Offset>((e + len) % dataCap);
     } else {
         size_t first_part = dataCap - e;
-        memcpy(&data[e], line.data(), first_part);
-        memcpy(&data[0], line.data() + first_part, len - first_part);
+        memcpy(&data[e], src, first_part);
+        memcpy(&data[0], src + first_part, len - first_part);
         end = static_cast<Offset>(len - first_part);
     }
+}
+
+template <size_t MaxBytes>
+void CharRingBuffer<MaxBytes>::add(std::string&& line) {
+    if (capacity == 0) return;
+
+    size_t len = line.size();
+    ensureStorage(len);
+
+    if (len > data.size()) return;
+
+    while (count == capacity) dropOldest();
+    while (freeSpace() < len && count > 0) dropOldest();
+    if (freeSpace() < len) return;
+
+    Offset lineStart = end;
+    copyToRing(line.data(), len);
 
     offsets[(offsetStart + count) % capacity] = lineStart;
-    if (count == 0) {
-        start = lineStart;
-    }
+    if (count == 0) start = lineStart;
     count++;
 }
 
 template <size_t MaxBytes>
 void CharRingBuffer<MaxBytes>::append_segment(const char* segment, size_t len) {
-    if (capacity == 0 || len == 0) {
-        return;
-    }
+    if (capacity == 0 || len == 0) return;
 
-    if (data.empty()) {
-        size_t perLine = len > 512 ? len : 512;
-        data.resize(capacity * perLine);
-    }
-
-    const size_t dataCap = data.size();
-    if (len > dataCap) {
-        return; // segment too large to fit
-    }
-
-    auto freeSpace = [&]() {
-        size_t s = static_cast<size_t>(start);
-        size_t e = static_cast<size_t>(end);
-        size_t used = (e >= s) ? e - s : dataCap - (s - e);
-        if (used == 0 && count > 0) {
-            used = dataCap;
-        }
-        return dataCap - used;
-    };
-
-    auto drop_oldest = [&]() {
-        if (count == 0) return;
-        Offset second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
-        start = second_start;
-        offsetStart = (offsetStart + 1) % capacity;
-        count--;
-    };
+    ensureStorage(len);
+    if (len > data.size()) return;
 
     if (!lineInProgress) {
-        while (count == capacity) {
-            drop_oldest();
-        }
+        while (count == capacity) dropOldest();
         currentLineStart = end;
         lineInProgress = true;
     }
 
     while (freeSpace() < len) {
         if (count == 0) break;
-        drop_oldest();
+        dropOldest();
     }
+    if (freeSpace() < len) return;
 
-    if (freeSpace() < len) {
-        return; // not enough space even after dropping
-    }
-
-    size_t e = static_cast<size_t>(end);
-    if (e + len <= dataCap) {
-        memcpy(&data[e], segment, len);
-        end = static_cast<Offset>((e + len) % dataCap);
-    } else {
-        size_t first_part = dataCap - e;
-        memcpy(&data[e], segment, first_part);
-        memcpy(&data[0], segment + first_part, len - first_part);
-        end = static_cast<Offset>(len - first_part);
-    }
+    copyToRing(segment, len);
 }
 
 template <size_t MaxBytes>
 void CharRingBuffer<MaxBytes>::append_line(const char* line, size_t len) {
-    if (capacity == 0) {
-        return;
-    }
+    if (capacity == 0) return;
 
-    if (data.empty()) {
-        size_t perLine = len > 512 ? len : 512;
-        data.resize(capacity * perLine);
-    }
+    ensureStorage(len);
+    if (len > data.size()) return;
 
-    const size_t dataCap = data.size();
-    if (len > dataCap) {
-        return; // line too large to fit
-    }
-
-    auto freeSpace = [&]() {
-        size_t s = static_cast<size_t>(start);
-        size_t e = static_cast<size_t>(end);
-        size_t used = (e >= s) ? e - s : dataCap - (s - e);
-        if (used == 0 && count > 0) {
-            used = dataCap;
-        }
-        return dataCap - used;
-    };
-
-    auto drop_oldest = [&]() {
-        if (count == 0) return;
-        Offset second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
-        start = second_start;
-        offsetStart = (offsetStart + 1) % capacity;
-        count--;
-    };
-
-    while (count == capacity) {
-        drop_oldest();
-    }
-
-    while (freeSpace() < len && count > 0) {
-        drop_oldest();
-    }
-
-    if (freeSpace() < len) {
-        return; // not enough space even after dropping
-    }
+    while (count == capacity) dropOldest();
+    while (freeSpace() < len && count > 0) dropOldest();
+    if (freeSpace() < len) return;
 
     Offset lineStart = end;
-    size_t e = static_cast<size_t>(end);
-    if (e + len <= dataCap) {
-        if (len > 0) {
-            memcpy(&data[e], line, len);
-        }
-        end = static_cast<Offset>((e + len) % dataCap);
-    } else {
-        size_t first_part = dataCap - e;
-        memcpy(&data[e], line, first_part);
-        memcpy(&data[0], line + first_part, len - first_part);
-        end = static_cast<Offset>(len - first_part);
-    }
+    copyToRing(line, len);
 
     offsets[(offsetStart + count) % capacity] = lineStart;
-    if (count == 0) {
-        start = lineStart;
-    }
+    if (count == 0) start = lineStart;
     count++;
     lineInProgress = false;
 }
@@ -221,30 +133,18 @@ void CharRingBuffer<MaxBytes>::end_line() {
     if (!lineInProgress) {
         while (count == capacity) {
             if (count == 0) break;
-            Offset second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
-            start = second_start;
-            offsetStart = (offsetStart + 1) % capacity;
-            count--;
+            dropOldest();
         }
         offsets[(offsetStart + count) % capacity] = end;
-        if (count == 0) {
-            start = end;
-        }
+        if (count == 0) start = end;
         count++;
         return;
     }
 
-    while (count == capacity) {
-        Offset second_start = (count > 1) ? offsets[(offsetStart + 1) % capacity] : end;
-        start = second_start;
-        offsetStart = (offsetStart + 1) % capacity;
-        count--;
-    }
+    while (count == capacity) dropOldest();
 
     offsets[(offsetStart + count) % capacity] = currentLineStart;
-    if (count == 0) {
-        start = currentLineStart;
-    }
+    if (count == 0) start = currentLineStart;
     count++;
     lineInProgress = false;
 }

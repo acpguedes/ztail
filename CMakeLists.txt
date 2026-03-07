@@ -48,7 +48,7 @@ if(BUILD_PORTABLE)
 elseif(USE_NATIVE)
     add_compile_options(-march=native)
 else()
-    add_compile_options(-march=x86-64-v3)
+    add_compile_options(-march=x86-64-v2)
 endif()
 
 if(ipo_supported)
@@ -83,6 +83,14 @@ if(ZTAIL_USE_THREADS)
     find_package(Threads REQUIRED)
 endif()
 
+# LZ4 is optional
+pkg_check_modules(LIBLZ4 liblz4)
+if(LIBLZ4_FOUND)
+    message(STATUS "LibLZ4 found: ${LIBLZ4_INCLUDE_DIRS}")
+else()
+    message(STATUS "LibLZ4 not found — LZ4 support disabled (install liblz4-dev to enable)")
+endif()
+
 if(LIBZIP_FOUND)
     message(STATUS "LibZip found: ${LIBZIP_INCLUDE_DIRS}")
 else()
@@ -108,6 +116,9 @@ include_directories(
     ${LIBZSTD_INCLUDE_DIRS}
     src
 )
+if(LIBLZ4_FOUND)
+    include_directories(${LIBLZ4_INCLUDE_DIRS})
+endif()
 
 # Enable testing infrastructure
 include(CTest)
@@ -126,6 +137,9 @@ set(ZTAIL_LIB_SOURCES
     src/tail_plain.cpp
     src/parser.cpp
 )
+if(LIBLZ4_FOUND)
+    list(APPEND ZTAIL_LIB_SOURCES src/compressor_lz4.cpp)
+endif()
 
 # Build library with core functionality
 add_library(ztail_lib ${ZTAIL_LIB_SOURCES})
@@ -137,6 +151,10 @@ target_link_libraries(ztail_lib
         ${LIBZIP_LIBRARIES}
         ${LIBZSTD_LIBRARIES}
 )
+if(LIBLZ4_FOUND)
+    target_link_libraries(ztail_lib PUBLIC ${LIBLZ4_LIBRARIES})
+    target_compile_definitions(ztail_lib PUBLIC ZTAIL_HAS_LZ4)
+endif()
 target_include_directories(ztail_lib PUBLIC src)
 if(USE_CHAR_RING_BUFFER)
     target_compile_definitions(ztail_lib PUBLIC USE_CHAR_RING_BUFFER)

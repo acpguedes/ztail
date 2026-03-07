@@ -38,7 +38,7 @@ TEST(CompressorZstdTest, DecompressInvalidFile){
         CompressorZstd c(std::move(det.file), filename);
         std::vector<char> buf(32);
         size_t n = 0;
-        c.decompress(buf, n);
+        (void)c.decompress(buf, n);
     }, std::runtime_error);
     std::remove(filename.c_str());
 }

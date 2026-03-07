@@ -1,6 +1,8 @@
 #include "compressor_zlib.h"
 #include <stdexcept>
 #include <cerrno>
+#include <limits>
+#include <algorithm>
 #include <unistd.h>
 
 CompressorZlib::CompressorZlib(FilePtr&& file, const std::string& filename, size_t bufferSize)
@@ -37,7 +39,9 @@ bool CompressorZlib::decompress(std::vector<char>& outBuffer, size_t& bytesDecom
         return false;
     }
 
-    int ret = gzread(gz.get(), outBuffer.data(), static_cast<unsigned int>(outBuffer.size()));
+    unsigned int readLen = static_cast<unsigned int>(
+        std::min(outBuffer.size(), static_cast<size_t>(std::numeric_limits<unsigned int>::max())));
+    int ret = gzread(gz.get(), outBuffer.data(), readLen);
     if (ret < 0) {
         int errnum = 0;
         gzerror(gz.get(), &errnum);
