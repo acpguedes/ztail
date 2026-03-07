@@ -9,19 +9,20 @@ on:
       - main
 
 jobs:
-  build:
-
+  build-full:
+    name: Full build (all optional dependencies)
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential \
-          zlib1g-dev libbz2-dev liblzma-dev libzstd-dev libzip-dev
+        sudo apt-get install -y cmake build-essential pkg-config \
+          zlib1g-dev libbz2-dev liblzma-dev libzstd-dev libzip-dev \
+          libarchive-dev liblz4-dev
 
     - name: Configure CMake
       run: |
@@ -29,13 +30,43 @@ jobs:
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 
-    - name: Build with Make
+    - name: Build
       run: |
         cd build
-        make
+        make -j$(nproc)
 
-    - name: Run Tests (if any)
+    - name: Run Tests
       run: |
         cd build
         ctest --output-on-failure
-      if: success() # Only run if the build step succeeds
+
+  build-minimal:
+    name: Minimal build (required dependencies only)
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential pkg-config \
+          zlib1g-dev libbz2-dev liblzma-dev libzstd-dev libzip-dev
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON \
+          -DZTAIL_ENABLE_TAR=OFF -DBUILD_PORTABLE=ON
+
+    - name: Build
+      run: |
+        cd build
+        make -j$(nproc)
+
+    - name: Run Tests
+      run: |
+        cd build
+        ctest --output-on-failure

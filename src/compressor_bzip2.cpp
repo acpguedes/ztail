@@ -1,6 +1,8 @@
 #include "compressor_bzip2.h"
 #include <stdexcept>
 #include <cerrno>
+#include <algorithm>
+#include <climits>
 
 CompressorBzip2::CompressorBzip2(FilePtr&& file, const std::string& filename)
     : file(std::move(file)), bz(nullptr), bzerror(BZ_OK), eof(false), filename(filename)
@@ -34,7 +36,9 @@ bool CompressorBzip2::decompress(std::vector<char>& outBuffer, size_t& bytesDeco
         return false;
     }
 
-    int nread = BZ2_bzRead(&bzerror, bz, outBuffer.data(), static_cast<int>(outBuffer.size()));
+    int readLen = static_cast<int>(
+        std::min(outBuffer.size(), static_cast<size_t>(INT_MAX)));
+    int nread = BZ2_bzRead(&bzerror, bz, outBuffer.data(), readLen);
     if (bzerror != BZ_OK && bzerror != BZ_STREAM_END) {
         throw std::runtime_error("bzip2 error (" + std::to_string(bzerror) + ") while decompressing '" + filename + "'");
     }

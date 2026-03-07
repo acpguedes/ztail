@@ -1,32 +1,34 @@
 # ztail
 <img width="1024" height="1024" alt="ChatGPT Image 22 de ago  de 2025, 06_52_55" src="https://github.com/user-attachments/assets/a7459c72-132f-43d9-80ad-9f6e8ca02c4f" />
 
-**ztail** is an efficient command-line tool to display the last N lines of compressed `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, `.zst`, optional tar-family archives (`.tar`, `.tar.gz`, and related variants, when built with libarchive), and optional `.lz4` files. Designed for high performance, **ztail** is ideal for working with large compressed text files.
+**ztail** is an efficient command-line tool to display the last N lines of compressed `.gz`, `.bgz`, `.bgzf`, `.bz2`, `.xz`, `.zip`, `.zst`, optional tar-family archives (`.tar`, `.tar.gz`, `.tar.bz2`, `.tar.xz`, `.tar.zst`, `.tar.lz4` and related variants), and optional `.lz4` files. Designed for high performance, **ztail** is ideal for working with large compressed text files.
 
-## 🛠️ **Features**
+## Features
 
-- **Supports `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, `.zst`, optional tar archives (`.tar`, `.tar.gz`, `.tar.bz2`, `.tar.xz`, `.tar.zst`) and optional `.lz4`:** Decompresses and processes these compressed file formats efficiently.
-- **Automatic Detection:** Compression type is identified from file contents even when the extension is missing or wrong.
-- **High Performance:** Optimized for large files, avoiding unnecessary full decompressions.
-- **Intuitive Command-Line Interface:** Simple usage with flexible options.
-- **Efficient Ring Buffer:** Uses a CharRingBuffer backend by default. Build with `-DUSE_CHAR_RING_BUFFER=OFF` to
-  switch to the slower std::string-based buffer for debugging purposes.
+- **Multi-format support:** Decompresses `.gz`, `.bgz`, `.bgzf`, `.bz2`, `.xz`, `.zip`, `.zst`, tar archives, and optional `.lz4` efficiently.
+- **Automatic detection:** Compression type is identified from file contents (magic bytes) even when the extension is missing or wrong.
+- **High performance:** Optimized for large files - streams data without full decompression, using zero-copy ring buffers and optional producer/consumer threading.
+- **Optimized I/O:** Uses `posix_fadvise` readahead hints, full-buffered stdout, and `memchr`-based line scanning for maximum throughput.
+- **Intuitive CLI:** Simple usage with flexible options, including `-q` for quiet mode and `--format` to force a specific decompressor.
+- **Efficient ring buffer:** Uses a CharRingBuffer backend by default. Build with `-DUSE_CHAR_RING_BUFFER=OFF` to switch to the slower std::string-based buffer for debugging.
+- **Stdin support:** Auto-detects compression format from piped data.
+- **Archive browsing:** List entries in ZIP and TAR archives with `--list-entries`.
 
-## 📦 **Installation**
+## Installation
 
-### 📋 **Prerequisites**
+### Prerequisites
 
 - **C++17** or higher.
-- **CMake** (version 3.10 or higher).
-- **zlib Library:** For decompressing `.gz` and `.bgz` files.
-- **bzip2 Library:** For handling `.bz2` files.
- - **liblzma Library:** For handling `.xz` files.
- - **libzstd Library:** For handling `.zst` files.
- - **libzip Library:** For handling `.zip` files.
- - **liblz4 Library (optional):** For handling `.lz4` files.
- - **libarchive Library (optional):** For handling tar-based archives (`.tar`, `.tar.gz`, etc.).
+- **CMake** (version 3.16 or higher).
+- **zlib** - for `.gz` and `.bgz`/`.bgzf` files.
+- **bzip2** - for `.bz2` files.
+- **liblzma** - for `.xz` files.
+- **libzstd** - for `.zst` files.
+- **libzip** - for `.zip` files.
+- **liblz4** (optional) - for `.lz4` files.
+- **libarchive** (optional) - for tar-based archives.
 
-On Ubuntu/Debian the required packages can typically be installed with:
+On Ubuntu/Debian:
 
 ```bash
 sudo apt install zlib1g-dev libbz2-dev liblzma-dev libzstd-dev libzip-dev libarchive-dev liblz4-dev
@@ -34,7 +36,7 @@ sudo apt install zlib1g-dev libbz2-dev liblzma-dev libzstd-dev libzip-dev libarc
 
 Library names may vary on other operating systems.
 
-### 🔧 **Build Steps**
+### Build Steps
 
 1. **Clone the Repository:**
 
@@ -59,186 +61,193 @@ Library names may vary on other operating systems.
    By default, **ztail** compiles with `-march=x86-64-v2`, which offers a good balance
    of performance and compatibility for most x86-64 systems.
 
-   - For maximum compatibility with older processors, enable the `BUILD_PORTABLE`
-     option:
+   - For maximum compatibility with older processors:
 
      ```bash
      cmake .. -DBUILD_PORTABLE=ON
      ```
 
-   - For the highest possible performance on the build machine, enable `USE_NATIVE`
-     to compile with `-march=native`:
+   - For the highest possible performance on the build machine:
 
      ```bash
      cmake .. -DUSE_NATIVE=ON
      ```
 
-   Using `-march=native` can yield additional speedups by exploiting all CPU features
-   available on the host, but the resulting binary may not run on systems with
-   different processors. `-march=x86-64-v2` remains broadly compatible while still
-   allowing modern instruction usage, and `BUILD_PORTABLE` trades performance for
-   maximum compatibility.
+   - To disable threading:
 
-   On systems without thread support, disable the producer/consumer threads with:
+     ```bash
+     cmake .. -DZTAIL_USE_THREADS=OFF
+     ```
 
-   ```bash
-   cmake .. -DZTAIL_USE_THREADS=OFF
-   ```
+   - To use the debug buffer backend:
 
-   Threads can also be disabled at runtime with the `--no-threads` option.
-
-   The high-performance CharRingBuffer backend is enabled by default. To use the previous
-   std::string-based implementation for debugging, disable it with:
-
-   ```bash
-   cmake .. -DUSE_CHAR_RING_BUFFER=OFF
-   ```
+     ```bash
+     cmake .. -DUSE_CHAR_RING_BUFFER=OFF
+     ```
 
 4. **Build the Project:**
 
    ```bash
-   make
+   make -j$(nproc)
    ```
 
-   This will generate the `ztail` executable inside the `build` directory.
+## Usage
 
-## 🚀 **Usage**
-
-### **Display the Last N Lines of compressed and tar-based files**
+### Display the Last N Lines
 
 ```bash
-./ztail -n 2 file.gz
-./ztail -n 2 -c 1024 file.gz
-./ztail -n 2 file.bgz
-./ztail -n 2 file.bz2
-./ztail -n 2 file.xz
-./ztail -n 2 file.zip
-./ztail -n 2 file.zst
-./ztail -n 2 file.tar
-./ztail -n 2 file.tar.gz
-./ztail -n 2 -e "logs/*.txt" file.tar.gz
-./ztail -e entry.txt archive.zip
-./ztail -e "logs/*.txt" archive.zip
-./ztail --quiet-headers file1.gz file2.gz
-./ztail --always-headers file.gz
-./ztail --version
-./ztail --help
+ztail -n 20 file.gz
+ztail -n 5 file.bz2
+ztail file.xz              # default: last 10 lines
+ztail -n 2 file.zst
+ztail -n 2 file.zip
+ztail -n 2 file.tar.gz
+cat file.gz | ztail -n 5   # stdin auto-detection
 ```
 
-- **`-n N`, `--lines N`**: Display the last N lines (default = 10).
-- **`-c N`, `--line-capacity N`**: Pre-reserve N bytes for each line to reduce reallocations (default = 512).
-- **`-b N`, `--zlib-buffer N`**: Set zlib buffer size in bytes (default = 1048576).
-- **`--xz-buffer N`**: Set xz buffer size in bytes (default = 32768).
-- **`--zstd-window N`**: Set maximum zstd window size in bytes (default = unlimited).
-- **`-r N`, `--read-buffer N`**: Set read buffer size in bytes (default = 1048576).
-- **`--no-threads`**: Disable producer/consumer threads.
-- **`file.gz`, `file.bgz`, `file.bz2`, `file.xz`, `file.zip`, `file.zst`, `file.tar`, `file.tar.gz`, ...**: Name of the compressed/archive file. Compression type is detected automatically when possible; tar-compressed combos are resolved by extension.
-- **`-e <name>`, `--entry <name>`**: When reading a `.zip` or `.tar*` file, select an entry inside the archive. Supports shell-style patterns (e.g., `logs/*.txt`).
-- **`--quiet-headers`**: Suppress file header lines when reading multiple files.
-- **`--always-headers`**: Always print file header lines (even for one file).
-- **`--list-entries`**: List entries in `.zip` archives and, when tar support is enabled, `.tar*` archives.
-- If no file is provided, **ztail** reads from standard input.
-- **`-V`, `--version`**: Display program version and exit.
-- **`-h`, `--help`**: Display usage information and exit.
+### Archive Operations
 
-## 💡 **Suggested Use Cases**
+```bash
+ztail -e entry.txt archive.zip           # specific entry
+ztail -e "logs/*.txt" archive.zip        # glob pattern
+ztail -e "logs/*.txt" archive.tar.gz     # tar entry pattern
+ztail --list-entries archive.zip         # list entries
+ztail --list-entries archive.tar.gz      # list tar entries
+```
+
+### Multi-file and Headers
+
+```bash
+ztail file1.gz file2.gz                  # headers shown by default
+ztail -q file1.gz file2.gz              # suppress headers
+ztail --always-headers file.gz           # force headers for single file
+```
+
+### Advanced Options
+
+```bash
+ztail -f gzip file.dat                   # force gzip format
+ztail --no-threads large.gz              # single-threaded mode
+ztail -c 4096 -n 100 file.gz            # larger line capacity
+ztail --bytes-budget 1048576 file.gz     # limit total memory
+ztail -b 2097152 file.gz                # 2MB zlib buffer
+ztail --xz-buffer 262144 file.xz        # 256KB xz buffer
+ztail --xz-memlimit 536870912 file.xz   # 512MB xz memory limit
+ztail --zstd-window 4194304 file.zst    # 4MB zstd window
+```
+
+## CLI Reference
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--lines N` | `-n` | Print the last N lines | 10 |
+| `--line-capacity N` | `-c` | Pre-reserve N bytes per line | 512 |
+| `--bytes-budget N` | | Limit total bytes for stored lines | unlimited |
+| `--zlib-buffer N` | `-b` | Zlib buffer size in bytes | 1048576 (1MB) |
+| `--xz-buffer N` | | XZ input buffer size in bytes | 131072 (128KB) |
+| `--xz-memlimit N` | | XZ decoder memory limit in bytes | 268435456 (256MB) |
+| `--zstd-window N` | | Max zstd window size (power of 2) | unlimited |
+| `--read-buffer N` | `-r` | Read buffer size in bytes | 1048576 (1MB) |
+| `--entry NAME` | `-e` | Entry name/pattern in archive | first entry |
+| `--format FMT` | `-f` | Force format (gzip\|bzip2\|xz\|zstd\|zip\|tar\|lz4\|plain) | auto |
+| `--list-entries` | | List archive entries and exit | |
+| `--print-aggregation-threshold N` | | Aggregated output threshold | 8388608 (8MB) |
+| `--no-threads` | | Disable producer/consumer threading | |
+| `--quiet-headers` | `-q` | Suppress multi-file headers | |
+| `--always-headers` | | Always show file headers | |
+| `--version` | `-V` | Show version and exit | |
+| `--help` | `-h` | Show help and exit | |
+
+## Output Format
+
+- Each line is output followed by a newline character (`\n`)
+- Lines are output in the same order as they appear in the file
+- For compressed files, the entire file is streamed but only the last N lines are kept in memory
+- For plain text files, a reverse-scan optimization avoids reading the full file
+- Multi-file output separates files with `==> filename <==` headers (like `tail`)
+
+## Suggested Use Cases
 
 1. **Quick inspection of huge files**
-   - *Problem:* Compressed files (`.gz`, `.bgz`, `.zip`) with tens or hundreds of gigabytes.
-   - *Reason:* Using `zcat | tail` forces a full read/decompression, which can take minutes or hours.
-   - *Where it's useful:* Server or application logs, database dumps exported with gzip, and large bioinformatics files (FASTQ, VCF) to verify integrity at the end.
+   - Compressed files with tens or hundreds of gigabytes
+   - Server logs, database dumps, bioinformatics files (FASTQ, VCF)
 
-2. **Processing in I/O-limited environments**
-   - *Problem:* Slow storage (S3, NFS, spinning disks, high-latency networks).
-   - *Reason:* Less reading means less waiting time.
-   - *Where it's useful:* Cloud environments with per-read costs (e.g., S3 Glacier) and remote servers over SSH with restricted bandwidth.
+2. **I/O-limited environments**
+   - Cloud storage (S3, GCS), NFS, spinning disks
+   - Remote servers over SSH with limited bandwidth
 
-3. **Diagnostics in data pipelines**
-   - *Problem:* In ETL/ELT, often only the end of the file matters for debugging (last processed batch).
-   - *Reason:* Avoids processing unnecessary data and speeds up debugging.
-   - *Where it's useful:* Data pipeline CI/CD and near real-time ingestion monitoring.
+3. **Data pipeline diagnostics**
+   - ETL/ELT debugging: check the last processed batch
+   - CI/CD pipeline log inspection
 
 4. **Bioinformatics and scientific data**
-   - *Problem:* Sequencing files, simulation logs, and scientific time series tend to be enormous.
-   - *Reason:* The end often reveals the result of a batch or run.
-   - *Where it's useful:* Compressed FASTQ, BAM, VCF files and outputs from meteorological or computational physics simulators.
+   - Compressed FASTQ, BAM, VCF files
+   - Simulation outputs and time series
 
-5. **Compatibility and portability**
-   - Works like `tail` for compressed files without requiring complex tools like Spark, Hadoop, or Pandas.
-   - Can be integrated into existing shell scripts, including minimal Unix environments.
+5. **Shell scripting**
+   - Drop-in replacement for `zcat file.gz | tail -n 20`
+   - Works with any supported format automatically
 
-## 🧪 **Tests**
+## Supported Formats
 
-Unit tests are located in the `tests/` directory. To run them:
+| Format | Extensions | Detection | Library | Status |
+|--------|-----------|-----------|---------|--------|
+| Gzip | `.gz`, `.bgz`, `.bgzf` | Magic bytes | zlib | Required |
+| Bzip2 | `.bz2` | Magic bytes | libbzip2 | Required |
+| XZ | `.xz` | Magic bytes | liblzma | Required |
+| Zstandard | `.zst` | Magic bytes | libzstd | Required |
+| ZIP | `.zip` | Magic bytes | libzip | Required |
+| LZ4 | `.lz4` | Magic bytes | liblz4 | Optional |
+| TAR | `.tar`, `.tgz`, `.tbz2`, `.txz`, `.tzst`, `.taz`, `.tlz4`, `.tar.*` | Extension | libarchive | Optional |
+| Plain text | any other | Fallback | stdio | Built-in |
 
-1. **Ensure the project was configured with testing enabled:**
+## Tests
 
-   ```bash
-   cmake .. -DBUILD_TESTING=ON
-   ```
+Unit tests use Google Test and are located in `tests/`.
 
-2. **Navigate to the Build Directory:**
+```bash
+cd build
+cmake .. -DBUILD_TESTING=ON
+make -j$(nproc)
+ctest --output-on-failure
+```
 
-   ```bash
-   cd build
-   ```
-
-3. **Execute the Tests:**
-
-   ```bash
-   ctest --output-on-failure
-   ```
-
-## 📝 **Contributing**
+## Contributing
 
 Contributions are welcome! To contribute:
 
-1. **Fork the Repository.**
-2. **Create a Branch for Your Feature or Bug Fix:**
-
+1. Fork the repository.
+2. Create a branch for your feature or bug fix:
    ```bash
    git checkout -b feature/new-feature
    ```
-
-3. **Make Your Changes and Commit:**
-
+3. Make your changes and commit using [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
    ```bash
    git commit -m "feat: Add new feature"
    ```
+4. Push and open a Pull Request.
 
-   Recomendation: Use [Conventional commits](https://www.conventionalcommits.org/en/v1.0.0/).
+Please ensure your contributions pass all tests and follow the project's coding standards.
+See [CLAUDE.md](CLAUDE.md) for detailed development guidelines.
 
-4. **Push to Your Fork:**
+## License
 
-   ```bash
-   git push origin feature/new-feature
-   ```
+This project is licensed under the [Apache License 2.0](LICENSE).
 
-5. **Open a Pull Request on the Original Repository.**
+## Security Considerations
 
-Please ensure that your contributions adhere to the project's coding standards and pass all tests.
-
-## 📜 **License**
-
-This project is licensed under the [Apache License 2.0](LICENSE) - see the [LICENSE](LICENSE) file for details.
-
-## 🛡️ **Security Considerations**
-
-- **Input Validation:** Ensure file paths and inputs are validated to prevent vulnerabilities such as path traversal.
-- **Error Handling:** Robust error handling to manage unexpected scenarios gracefully.
+- **Input Validation:** File paths and CLI arguments are validated before use.
+- **Memory Limits:** XZ decoder has a configurable memory limit (default 256MB).
+- **Buffer Clamping:** Library-specific buffer sizes are clamped to prevent integer overflow.
+- **Error Handling:** All library errors are caught and reported with descriptive messages.
 - **Dependency Management:** Keep dependencies up-to-date to mitigate potential security risks.
 
-## 🏆 **Development Highlights**
+## Development Highlights
 
-Over time **ztail** evolved through several improvements:
-
-- Modularized codebase and introduced continuous integration with tests.
-- Added bzip2 and xz support, expanding beyond gzip.
-- Implemented automatic compression detection using magic bytes.
-- Introduced an `ICompressor` interface with RAII wrappers for safe resource management.
-- Enhanced CLI validation and clarified documentation with installation instructions.
-- Updated GitHub workflows and dependencies for reliable builds.
-
----
-
-Feel free to reach out if you have any questions or need further assistance!
+- Modular architecture with ICompressor interface and factory pattern
+- Zero-copy CharRingBuffer for minimal memory footprint
+- Producer/consumer threading with adaptive buffer sizing
+- Magic-byte detection for reliable format identification
+- RAII throughout for safe resource management
+- Comprehensive test suite with Google Test
+- CI/CD with GitHub Actions

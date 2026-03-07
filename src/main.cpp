@@ -1,17 +1,7 @@
 #include "circular_buffer.h"
 #include "cli.h"
 #include "parser.h"
-#include "compressor_zlib.h"
-#include "compressor_zip.h"
-#include "compressor_bzip2.h"
-#include "compressor_xz.h"
-#include "compressor_zstd.h"
-#ifdef ZTAIL_HAS_TAR
-#include "compressor_tar.h"
-#endif
-#ifdef ZTAIL_HAS_LZ4
-#include "compressor_lz4.h"
-#endif
+#include "compressor_factory.h"
 #include "icompressor.h"
 #include "compression_type.h"
 #include "tail_plain.h"
@@ -51,39 +41,6 @@ void adviseSequential(FILE* f) {
 #else
 void adviseSequential(FILE*) {}
 #endif
-
-using CompressorFactory = std::function<std::unique_ptr<ICompressor>(
-    FilePtr&&, const std::string&, const CLIOptions&)>;
-
-std::unordered_map<CompressionType, CompressorFactory> buildFactoryMap() {
-    std::unordered_map<CompressionType, CompressorFactory> map;
-    map[CompressionType::GZIP] = [](FilePtr&& f, const std::string& name, const CLIOptions& opts) {
-        return std::make_unique<CompressorZlib>(std::move(f), name, opts.zlibBufferSize);
-    };
-    map[CompressionType::BZIP2] = [](FilePtr&& f, const std::string& name, const CLIOptions&) {
-        return std::make_unique<CompressorBzip2>(std::move(f), name);
-    };
-    map[CompressionType::XZ] = [](FilePtr&& f, const std::string& name, const CLIOptions& opts) {
-        return std::make_unique<CompressorXz>(std::move(f), name, opts.xzBufferSize, opts.xzMemLimit);
-    };
-    map[CompressionType::ZIP] = [](FilePtr&& f, const std::string& name, const CLIOptions& opts) {
-        return std::make_unique<CompressorZip>(std::move(f), name, opts.zipEntry);
-    };
-    map[CompressionType::ZSTD] = [](FilePtr&& f, const std::string& name, const CLIOptions& opts) {
-        return std::make_unique<CompressorZstd>(std::move(f), name, opts.zstdWindowSize);
-    };
-#ifdef ZTAIL_HAS_TAR
-    map[CompressionType::TAR] = [](FilePtr&& f, const std::string& name, const CLIOptions& opts) {
-        return std::make_unique<CompressorTar>(std::move(f), name, opts.zipEntry);
-    };
-#endif
-#ifdef ZTAIL_HAS_LZ4
-    map[CompressionType::LZ4] = [](FilePtr&& f, const std::string& name, const CLIOptions&) {
-        return std::make_unique<CompressorLz4>(std::move(f), name);
-    };
-#endif
-    return map;
-}
 
 void streamToFd(int fd, const unsigned char* header, size_t headerSize, size_t chunkSize) {
     auto writeAll = [fd](const char* data, size_t len) {
@@ -154,9 +111,9 @@ void processStream(Reader reader, Parser& parser, CircularBuffer& cb,
                         ++idleCount;
                         if (idleCount >= 3 && currentSize > minSize) {
                             currentSize /= 2;
-                            for (auto& b : buffers) {
-                                std::vector<char>(currentSize).swap(b);
-                            }
+                            // Only resize the buffer we are about to use (idx),
+                            // the other may still be in use by the consumer.
+                            std::vector<char>(currentSize).swap(buffers[idx]);
                             idleCount = 0;
                         }
                     } else {
@@ -167,9 +124,8 @@ void processStream(Reader reader, Parser& parser, CircularBuffer& cb,
                         size_t grown = std::min(bufferSize, currentSize * 2);
                         if (grown != currentSize) {
                             currentSize = grown;
-                            for (auto& b : buffers) {
-                                b.resize(currentSize);
-                            }
+                            // Only resize the buffer we are about to use.
+                            buffers[idx].resize(currentSize);
                         }
                     }
                 }
@@ -242,13 +198,18 @@ void processStream(Reader reader, Parser& parser, CircularBuffer& cb,
 int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
     std::cout.tie(nullptr);
+
+    // Use full buffering on stdout for better I/O throughput with large output
+    static char stdoutBuf[65536];
+    std::setvbuf(stdout, stdoutBuf, _IOFBF, sizeof(stdoutBuf));
+
     try {
         CLIOptions options = CLI::parse(argc, argv);
         if (options.lineCapacity == 0) {
             std::cerr << "WARNING: line capacity is 0; no buffer will be preallocated for lines" << std::endl;
         }
 
-        auto factories = buildFactoryMap();
+        auto factories = buildCompressorFactoryMap();
         const bool multiFile = options.filenames.size() > 1;
 
         if (!options.filenames.empty()) {
@@ -276,7 +237,6 @@ int main(int argc, char* argv[]) {
                     ctype = det.type;
                     file = std::move(det.file);
                 }
-
 
                 if (options.listEntries) {
                     if (ctype == CompressionType::ZIP) {

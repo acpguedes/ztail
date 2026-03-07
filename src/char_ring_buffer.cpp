@@ -131,10 +131,7 @@ void CharRingBuffer<MaxBytes>::end_line() {
     }
 
     if (!lineInProgress) {
-        while (count == capacity) {
-            if (count == 0) break;
-            dropOldest();
-        }
+        while (count == capacity) dropOldest();
         offsets[(offsetStart + count) % capacity] = end;
         if (count == 0) start = end;
         count++;

@@ -36,26 +36,50 @@ CompressionType detectCompressionTypeFromBytes(const unsigned char* bytes, size_
     return CompressionType::NONE;
 }
 
+const char* compressionTypeName(CompressionType type) {
+    switch (type) {
+    case CompressionType::GZIP:  return "gzip";
+    case CompressionType::BZIP2: return "bzip2";
+    case CompressionType::XZ:    return "xz";
+    case CompressionType::ZSTD:  return "zstd";
+    case CompressionType::ZIP:   return "zip";
+    case CompressionType::LZ4:   return "lz4";
+    case CompressionType::TAR:   return "tar";
+    case CompressionType::NONE:  return "plain";
+    }
+    return "unknown";
+}
+
+static bool endsWith(const std::string& s, const char* suffix, size_t suffixLen) {
+    return s.size() >= suffixLen && s.compare(s.size() - suffixLen, suffixLen, suffix) == 0;
+}
+
 static CompressionType fallbackByExtension(const std::string& filename) {
 #ifdef ZTAIL_HAS_TAR
-    if (filename.size() >= 7 && filename.compare(filename.size() - 7, 7, ".tar.gz") == 0) return CompressionType::TAR;
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".tgz") == 0) return CompressionType::TAR;
-    if (filename.size() >= 8 && filename.compare(filename.size() - 8, 8, ".tar.bz2") == 0) return CompressionType::TAR;
-    if (filename.size() >= 5 && filename.compare(filename.size() - 5, 5, ".tbz2") == 0) return CompressionType::TAR;
-    if (filename.size() >= 7 && filename.compare(filename.size() - 7, 7, ".tar.xz") == 0) return CompressionType::TAR;
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".txz") == 0) return CompressionType::TAR;
-    if (filename.size() >= 8 && filename.compare(filename.size() - 8, 8, ".tar.zst") == 0) return CompressionType::TAR;
-    if (filename.size() >= 5 && filename.compare(filename.size() - 5, 5, ".tzst") == 0) return CompressionType::TAR;
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".tar") == 0) return CompressionType::TAR;
+    // TAR compound extensions must be checked before simple ones
+    if (endsWith(filename, ".tar.gz", 7))  return CompressionType::TAR;
+    if (endsWith(filename, ".tar.bz2", 8)) return CompressionType::TAR;
+    if (endsWith(filename, ".tar.xz", 7))  return CompressionType::TAR;
+    if (endsWith(filename, ".tar.zst", 8)) return CompressionType::TAR;
+    if (endsWith(filename, ".tar.lz4", 8)) return CompressionType::TAR;
+    if (endsWith(filename, ".tgz", 4))     return CompressionType::TAR;
+    if (endsWith(filename, ".tbz2", 5))    return CompressionType::TAR;
+    if (endsWith(filename, ".tb2", 4))     return CompressionType::TAR;
+    if (endsWith(filename, ".txz", 4))     return CompressionType::TAR;
+    if (endsWith(filename, ".tzst", 5))    return CompressionType::TAR;
+    if (endsWith(filename, ".taz", 4))     return CompressionType::TAR;
+    if (endsWith(filename, ".tlz4", 5))    return CompressionType::TAR;
+    if (endsWith(filename, ".tar", 4))     return CompressionType::TAR;
 #endif
 
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".zst") == 0) return CompressionType::ZSTD;
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".lz4") == 0) return CompressionType::LZ4;
-    if (filename.size() >= 3 && filename.compare(filename.size() - 3, 3, ".gz") == 0) return CompressionType::GZIP;
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".bgz") == 0) return CompressionType::GZIP;
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".bz2") == 0) return CompressionType::BZIP2;
-    if (filename.size() >= 3 && filename.compare(filename.size() - 3, 3, ".xz") == 0) return CompressionType::XZ;
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".zip") == 0) return CompressionType::ZIP;
+    if (endsWith(filename, ".zst", 4))  return CompressionType::ZSTD;
+    if (endsWith(filename, ".lz4", 4))  return CompressionType::LZ4;
+    if (endsWith(filename, ".gz", 3))   return CompressionType::GZIP;
+    if (endsWith(filename, ".bgz", 4))  return CompressionType::GZIP;
+    if (endsWith(filename, ".bgzf", 5)) return CompressionType::GZIP;
+    if (endsWith(filename, ".bz2", 4))  return CompressionType::BZIP2;
+    if (endsWith(filename, ".xz", 3))   return CompressionType::XZ;
+    if (endsWith(filename, ".zip", 4))  return CompressionType::ZIP;
     return CompressionType::NONE;
 }
 

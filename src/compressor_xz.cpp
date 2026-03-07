@@ -54,7 +54,7 @@ bool CompressorXz::decompress(std::vector<char>& outBuffer, size_t& bytesDecompr
             throw std::runtime_error("lzma error (" + std::to_string(ret) + ") while decompressing '" + filename + "'");
         }
         if (ret == LZMA_BUF_ERROR && strm.avail_in == 0) {
-            // Need more input
+            if (eof) break;
             continue;
         }
         if (ret == LZMA_BUF_ERROR) {
