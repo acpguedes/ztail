@@ -6,7 +6,9 @@
 #include "compressor_bzip2.h"
 #include "compressor_xz.h"
 #include "compressor_zstd.h"
+#ifdef ZTAIL_HAS_TAR
 #include "compressor_tar.h"
+#endif
 #ifdef ZTAIL_HAS_LZ4
 #include "compressor_lz4.h"
 #endif
@@ -70,9 +72,11 @@ std::unordered_map<CompressionType, CompressorFactory> buildFactoryMap() {
     map[CompressionType::ZSTD] = [](FilePtr&& f, const std::string& name, const CLIOptions& opts) {
         return std::make_unique<CompressorZstd>(std::move(f), name, opts.zstdWindowSize);
     };
+#ifdef ZTAIL_HAS_TAR
     map[CompressionType::TAR] = [](FilePtr&& f, const std::string& name, const CLIOptions& opts) {
         return std::make_unique<CompressorTar>(std::move(f), name, opts.zipEntry);
     };
+#endif
 #ifdef ZTAIL_HAS_LZ4
     map[CompressionType::LZ4] = [](FilePtr&& f, const std::string& name, const CLIOptions&) {
         return std::make_unique<CompressorLz4>(std::move(f), name);
@@ -277,9 +281,13 @@ int main(int argc, char* argv[]) {
                 if (options.listEntries) {
                     if (ctype == CompressionType::ZIP) {
                         listZipEntries(filename);
+#ifdef ZTAIL_HAS_TAR
                     } else if (ctype == CompressionType::TAR) {
                         listTarEntries(filename);
                     } else {
+#else
+                    } else {
+#endif
                         throw std::runtime_error("--list-entries is only supported for zip/tar inputs");
                     }
                     continue;

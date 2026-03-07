@@ -1,13 +1,15 @@
 #include "compression_type.h"
 
-#include <archive.h>
-#include <archive_entry.h>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
 #include <zip.h>
+#ifdef ZTAIL_HAS_TAR
+#include <archive.h>
+#include <archive_entry.h>
+#endif
 
 CompressionType detectCompressionTypeFromBytes(const unsigned char* bytes, size_t read) {
     if (read >= 4 && bytes[0] == 0x28 && bytes[1] == 0xB5 && bytes[2] == 0x2F && bytes[3] == 0xFD) {
@@ -35,6 +37,7 @@ CompressionType detectCompressionTypeFromBytes(const unsigned char* bytes, size_
 }
 
 static CompressionType fallbackByExtension(const std::string& filename) {
+#ifdef ZTAIL_HAS_TAR
     if (filename.size() >= 7 && filename.compare(filename.size() - 7, 7, ".tar.gz") == 0) return CompressionType::TAR;
     if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".tgz") == 0) return CompressionType::TAR;
     if (filename.size() >= 8 && filename.compare(filename.size() - 8, 8, ".tar.bz2") == 0) return CompressionType::TAR;
@@ -44,6 +47,7 @@ static CompressionType fallbackByExtension(const std::string& filename) {
     if (filename.size() >= 8 && filename.compare(filename.size() - 8, 8, ".tar.zst") == 0) return CompressionType::TAR;
     if (filename.size() >= 5 && filename.compare(filename.size() - 5, 5, ".tzst") == 0) return CompressionType::TAR;
     if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".tar") == 0) return CompressionType::TAR;
+#endif
 
     if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".zst") == 0) return CompressionType::ZSTD;
     if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".lz4") == 0) return CompressionType::LZ4;
@@ -65,9 +69,11 @@ DetectionResult detectCompressionType(const std::string& filename) {
     size_t read = std::fread(bytes, 1, sizeof(bytes), file.get());
 
     CompressionType byExt = fallbackByExtension(filename);
+#ifdef ZTAIL_HAS_TAR
     if (byExt == CompressionType::TAR) {
         return {CompressionType::TAR, std::move(file)};
     }
+#endif
 
     CompressionType type = detectCompressionTypeFromBytes(bytes, read);
     if (type == CompressionType::NONE) {
@@ -98,6 +104,7 @@ void listZipEntries(const std::string& filename) {
     zip_close(za);
 }
 
+#ifdef ZTAIL_HAS_TAR
 void listTarEntries(const std::string& filename) {
     archive* ar = archive_read_new();
     if (!ar) {
@@ -139,3 +146,8 @@ void listTarEntries(const std::string& filename) {
 
     archive_read_free(ar);
 }
+#else
+void listTarEntries(const std::string& filename) {
+    throw std::runtime_error("TAR support is not available in this build (libarchive not found): " + filename);
+}
+#endif

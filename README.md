@@ -1,11 +1,11 @@
 # ztail
 <img width="1024" height="1024" alt="ChatGPT Image 22 de ago  de 2025, 06_52_55" src="https://github.com/user-attachments/assets/a7459c72-132f-43d9-80ad-9f6e8ca02c4f" />
 
-**ztail** is an efficient command-line tool to display the last N lines of compressed `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, `.zst`, `.tar`, `.tar.gz` (and related tar+compression variants), and optional `.lz4` files. Designed for high performance, **ztail** is ideal for working with large compressed text files.
+**ztail** is an efficient command-line tool to display the last N lines of compressed `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, `.zst`, optional tar-family archives (`.tar`, `.tar.gz`, and related variants, when built with libarchive), and optional `.lz4` files. Designed for high performance, **ztail** is ideal for working with large compressed text files.
 
 ## 🛠️ **Features**
 
-- **Supports `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, `.zst`, tar archives (`.tar`, `.tar.gz`, `.tar.bz2`, `.tar.xz`, `.tar.zst`) and optional `.lz4`:** Decompresses and processes these compressed file formats efficiently.
+- **Supports `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, `.zst`, optional tar archives (`.tar`, `.tar.gz`, `.tar.bz2`, `.tar.xz`, `.tar.zst`) and optional `.lz4`:** Decompresses and processes these compressed file formats efficiently.
 - **Automatic Detection:** Compression type is identified from file contents even when the extension is missing or wrong.
 - **High Performance:** Optimized for large files, avoiding unnecessary full decompressions.
 - **Intuitive Command-Line Interface:** Simple usage with flexible options.
@@ -24,7 +24,7 @@
  - **libzstd Library:** For handling `.zst` files.
  - **libzip Library:** For handling `.zip` files.
  - **liblz4 Library (optional):** For handling `.lz4` files.
- - **libarchive Library:** For handling tar-based archives (`.tar`, `.tar.gz`, etc.).
+ - **libarchive Library (optional):** For handling tar-based archives (`.tar`, `.tar.gz`, etc.).
 
 On Ubuntu/Debian the required packages can typically be installed with:
 
@@ -136,7 +136,7 @@ Library names may vary on other operating systems.
 - **`-e <name>`, `--entry <name>`**: When reading a `.zip` or `.tar*` file, select an entry inside the archive. Supports shell-style patterns (e.g., `logs/*.txt`).
 - **`--quiet-headers`**: Suppress file header lines when reading multiple files.
 - **`--always-headers`**: Always print file header lines (even for one file).
-- **`--list-entries`**: List entries in `.zip`/`.tar*` archives and exit.
+- **`--list-entries`**: List entries in `.zip` archives and, when tar support is enabled, `.tar*` archives.
 - If no file is provided, **ztail** reads from standard input.
 - **`-V`, `--version`**: Display program version and exit.
 - **`-h`, `--help`**: Display usage information and exit.

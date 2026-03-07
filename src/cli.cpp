@@ -35,7 +35,9 @@ CompressionType parseFormat(const char* s) {
     if (strcmp(s, "xz") == 0) return CompressionType::XZ;
     if (strcmp(s, "zstd") == 0 || strcmp(s, "zst") == 0) return CompressionType::ZSTD;
     if (strcmp(s, "zip") == 0) return CompressionType::ZIP;
+#ifdef ZTAIL_HAS_TAR
     if (strcmp(s, "tar") == 0 || strcmp(s, "tgz") == 0 || strcmp(s, "tbz2") == 0 || strcmp(s, "txz") == 0 || strcmp(s, "tzst") == 0) return CompressionType::TAR;
+#endif
 #ifdef ZTAIL_HAS_LZ4
     if (strcmp(s, "lz4") == 0) return CompressionType::LZ4;
 #endif
@@ -57,8 +59,15 @@ void CLI::usage(const char* progName) {
         << "      --zstd-window N : set max zstd window size in bytes (default = unlimited)\n"
         << "  -r, --read-buffer N : set read buffer size in bytes (default = 1048576)\n"
         << "  -e, --entry <name> : entry name inside zip archive\n"
-        << "      --list-entries  : list entries in zip/tar archive and exit\n"
-        << "  -f, --format <fmt> : force compression format (gzip|bzip2|xz|zstd|zip|tar"
+        << "      --list-entries  : list entries in zip"
+#ifdef ZTAIL_HAS_TAR
+        << "/tar"
+#endif
+        << " archive and exit\n"
+        << "  -f, --format <fmt> : force compression format (gzip|bzip2|xz|zstd|zip"
+#ifdef ZTAIL_HAS_TAR
+        << "|tar"
+#endif
 #ifdef ZTAIL_HAS_LZ4
         << "|lz4"
 #endif
