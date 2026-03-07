@@ -79,6 +79,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED libzip)
 pkg_check_modules(LIBLZMA REQUIRED liblzma)
 pkg_check_modules(LIBZSTD REQUIRED libzstd)
+pkg_check_modules(LIBARCHIVE REQUIRED libarchive)
 if(ZTAIL_USE_THREADS)
     find_package(Threads REQUIRED)
 endif()
@@ -105,6 +106,11 @@ if(LIBZSTD_FOUND)
     message(STATUS "LibZSTD found: ${LIBZSTD_INCLUDE_DIRS}")
 else()
     message(FATAL_ERROR "LibZSTD not found!")
+endif()
+if(LIBARCHIVE_FOUND)
+    message(STATUS "LibArchive found: ${LIBARCHIVE_INCLUDE_DIRS}")
+else()
+    message(FATAL_ERROR "LibArchive not found!")
 endif()
 
 # Include Directories
@@ -133,6 +139,7 @@ set(ZTAIL_LIB_SOURCES
     src/compressor_xz.cpp
     src/compressor_zip.cpp
     src/compressor_zstd.cpp
+    src/compressor_tar.cpp
     src/compression_type.cpp
     src/tail_plain.cpp
     src/parser.cpp
@@ -150,6 +157,7 @@ target_link_libraries(ztail_lib
         ${LIBLZMA_LIBRARIES}
         ${LIBZIP_LIBRARIES}
         ${LIBZSTD_LIBRARIES}
+        ${LIBARCHIVE_LIBRARIES}
 )
 if(LIBLZ4_FOUND)
     target_link_libraries(ztail_lib PUBLIC ${LIBLZ4_LIBRARIES})
@@ -189,8 +197,10 @@ if(BUILD_TESTING)
         tests/test_compressor_xz.cpp
         tests/test_compressor_zip.cpp
         tests/test_compressor_zstd.cpp
+        tests/test_compressor_tar.cpp
         tests/test_parser.cpp
         tests/test_detection.cpp
+        tests/test_cli.cpp
         src/main.cpp
     )
     target_link_libraries(ztail_tests PRIVATE gtest_main ztail_lib)

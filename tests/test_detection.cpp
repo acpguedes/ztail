@@ -103,3 +103,13 @@ TEST(CompressionDetection, PlaintextFile){
     std::remove(fname.c_str());
 }
 
+
+
+TEST(CompressionDetection, TarGzByExtension){
+    const std::string fname = "archive.tar.gz";
+    std::ofstream ofs(fname);
+    ofs << "not really gz but extension fallback for tar container";
+    ofs.close();
+    EXPECT_EQ(detectCompressionType(fname).type, CompressionType::TAR);
+    std::remove(fname.c_str());
+}

@@ -1,9 +1,12 @@
 #include "compression_type.h"
-#include <cstdio>
+
+#include <archive.h>
+#include <archive_entry.h>
 #include <cerrno>
+#include <cstdio>
 #include <cstring>
-#include <stdexcept>
 #include <iostream>
+#include <stdexcept>
 #include <zip.h>
 
 CompressionType detectCompressionTypeFromBytes(const unsigned char* bytes, size_t read) {
@@ -32,20 +35,23 @@ CompressionType detectCompressionTypeFromBytes(const unsigned char* bytes, size_
 }
 
 static CompressionType fallbackByExtension(const std::string& filename) {
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".zst") == 0)
-        return CompressionType::ZSTD;
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".lz4") == 0)
-        return CompressionType::LZ4;
-    if (filename.size() >= 3 && filename.compare(filename.size() - 3, 3, ".gz") == 0)
-        return CompressionType::GZIP;
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".bgz") == 0)
-        return CompressionType::GZIP;
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".bz2") == 0)
-        return CompressionType::BZIP2;
-    if (filename.size() >= 3 && filename.compare(filename.size() - 3, 3, ".xz") == 0)
-        return CompressionType::XZ;
-    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".zip") == 0)
-        return CompressionType::ZIP;
+    if (filename.size() >= 7 && filename.compare(filename.size() - 7, 7, ".tar.gz") == 0) return CompressionType::TAR;
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".tgz") == 0) return CompressionType::TAR;
+    if (filename.size() >= 8 && filename.compare(filename.size() - 8, 8, ".tar.bz2") == 0) return CompressionType::TAR;
+    if (filename.size() >= 5 && filename.compare(filename.size() - 5, 5, ".tbz2") == 0) return CompressionType::TAR;
+    if (filename.size() >= 7 && filename.compare(filename.size() - 7, 7, ".tar.xz") == 0) return CompressionType::TAR;
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".txz") == 0) return CompressionType::TAR;
+    if (filename.size() >= 8 && filename.compare(filename.size() - 8, 8, ".tar.zst") == 0) return CompressionType::TAR;
+    if (filename.size() >= 5 && filename.compare(filename.size() - 5, 5, ".tzst") == 0) return CompressionType::TAR;
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".tar") == 0) return CompressionType::TAR;
+
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".zst") == 0) return CompressionType::ZSTD;
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".lz4") == 0) return CompressionType::LZ4;
+    if (filename.size() >= 3 && filename.compare(filename.size() - 3, 3, ".gz") == 0) return CompressionType::GZIP;
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".bgz") == 0) return CompressionType::GZIP;
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".bz2") == 0) return CompressionType::BZIP2;
+    if (filename.size() >= 3 && filename.compare(filename.size() - 3, 3, ".xz") == 0) return CompressionType::XZ;
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".zip") == 0) return CompressionType::ZIP;
     return CompressionType::NONE;
 }
 
@@ -58,9 +64,14 @@ DetectionResult detectCompressionType(const std::string& filename) {
     unsigned char bytes[6] = {0};
     size_t read = std::fread(bytes, 1, sizeof(bytes), file.get());
 
+    CompressionType byExt = fallbackByExtension(filename);
+    if (byExt == CompressionType::TAR) {
+        return {CompressionType::TAR, std::move(file)};
+    }
+
     CompressionType type = detectCompressionTypeFromBytes(bytes, read);
     if (type == CompressionType::NONE) {
-        type = fallbackByExtension(filename);
+        type = byExt;
     }
 
     return {type, std::move(file)};
@@ -85,4 +96,46 @@ void listZipEntries(const std::string& filename) {
         }
     }
     zip_close(za);
+}
+
+void listTarEntries(const std::string& filename) {
+    archive* ar = archive_read_new();
+    if (!ar) {
+        throw std::runtime_error("libarchive error while initializing reader for '" + filename + "'");
+    }
+
+    archive_read_support_filter_all(ar);
+    archive_read_support_format_tar(ar);
+
+    if (archive_read_open_filename(ar, filename.c_str(), 10240) != ARCHIVE_OK) {
+        std::string err = archive_error_string(ar) ? archive_error_string(ar) : "unknown";
+        archive_read_free(ar);
+        throw std::runtime_error("libarchive error while opening '" + filename + "': " + err);
+    }
+
+    archive_entry* entry = nullptr;
+    while (true) {
+        int ret = archive_read_next_header(ar, &entry);
+        if (ret == ARCHIVE_EOF) {
+            break;
+        }
+        if (ret != ARCHIVE_OK) {
+            std::string err = archive_error_string(ar) ? archive_error_string(ar) : "unknown";
+            archive_read_free(ar);
+            throw std::runtime_error("libarchive error while listing entries in '" + filename + "': " + err);
+        }
+
+        const char* name = archive_entry_pathname(entry);
+        la_int64_t size = archive_entry_size(entry);
+        if (name) {
+            if (size >= 0) {
+                std::cout << static_cast<unsigned long long>(size) << '\t' << name << '\n';
+            } else {
+                std::cout << "?\t" << name << '\n';
+            }
+        }
+        archive_read_data_skip(ar);
+    }
+
+    archive_read_free(ar);
 }
