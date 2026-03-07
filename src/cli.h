@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "compression_type.h"
 
 struct CLIOptions {
     int n = 10;             // Number of lines to print (default = 10)
@@ -11,16 +12,19 @@ struct CLIOptions {
     std::vector<std::string> filenames;   // Names of files to process
     std::string zipEntry;   // Optional entry name for zip files
     size_t zlibBufferSize = 1 << 20; // Buffer size for zlib operations
-    size_t xzBufferSize = 1 << 15;   // Buffer size for xz operations
+    size_t xzBufferSize = 1 << 17;   // Buffer size for xz operations (128KB)
+    size_t xzMemLimit = 256 * 1024 * 1024; // Memory limit for xz decoder (256MB)
     size_t zstdWindowSize = 0;       // Max window size for zstd (0 = default)
     size_t readBufferSize = 1 << 20; // Buffer size for reading files
     size_t printAggregationThreshold = 8 * 1024 * 1024; // Threshold for block printing
     bool useThreads = true; // Enable producer/consumer threads
+    CompressionType forceFormat = CompressionType::NONE; // Force decompressor
+    bool listEntries = false; // List zip entries and exit
 };
 
 class CLI {
 public:
-    static CLIOptions parse(int argc, char* argv[]);
+    [[nodiscard]] static CLIOptions parse(int argc, char* argv[]);
     static void usage(const char* progName);
 };
 

@@ -11,9 +11,9 @@
 class CompressorZstd : public ICompressor {
 public:
     explicit CompressorZstd(FilePtr&& file, const std::string& filename, size_t windowSize = 0);
-    ~CompressorZstd();
+    ~CompressorZstd() noexcept;
 
-    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
+    [[nodiscard]] bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
 
 private:
     FilePtr file;

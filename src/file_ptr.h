@@ -4,7 +4,7 @@
 #include <memory>
 
 struct FileCloser {
-    void operator()(FILE* f) const {
+    void operator()(FILE* f) const noexcept {
         if (f) std::fclose(f);
     }
 };

@@ -1,9 +1,12 @@
 #include "parser.h"
-#include <cstring> // memchr, memcpy
+#include <cstring> // memchr
 
-Parser::Parser(CircularBuffer& cb, size_t /*lineCapacity*/)
-    : circularBuffer(cb), residual(), residualLen(0)
+Parser::Parser(CircularBuffer& cb, size_t lineCapacity)
+    : circularBuffer(cb), residual()
 {
+    if (lineCapacity > 0) {
+        residual.reserve(lineCapacity);
+    }
 }
 
 void Parser::parse(const char* data, size_t size) {
@@ -17,10 +20,10 @@ void Parser::parse(const char* data, size_t size) {
         );
 
         if (newline_ptr) {
-            size_t line_length = newline_ptr - start_ptr;
-            if (residualLen > 0) {
-                circularBuffer.append_segment(residual, residualLen);
-                residualLen = 0;
+            size_t line_length = static_cast<size_t>(newline_ptr - start_ptr);
+            if (!residual.empty()) {
+                circularBuffer.append_segment(residual.data(), residual.size());
+                residual.clear();
                 if (line_length > 0) {
                     circularBuffer.append_segment(start_ptr, line_length);
                 }
@@ -30,23 +33,16 @@ void Parser::parse(const char* data, size_t size) {
             }
             pos += line_length + 1;
         } else {
-            size_t copy_len = remaining;
-            if (copy_len + residualLen > RESIDUAL_SIZE) {
-                copy_len = RESIDUAL_SIZE - residualLen;
-            }
-            if (copy_len > 0) {
-                memcpy(residual + residualLen, start_ptr, copy_len);
-                residualLen += copy_len;
-            }
+            residual.insert(residual.end(), start_ptr, start_ptr + remaining);
             break;
         }
     }
 }
 
 void Parser::finalize() {
-    if (residualLen > 0) {
-        circularBuffer.append_segment(residual, residualLen);
+    if (!residual.empty()) {
+        circularBuffer.append_segment(residual.data(), residual.size());
         circularBuffer.end_line();
-        residualLen = 0;
+        residual.clear();
     }
 }

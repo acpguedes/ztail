@@ -1,45 +1,88 @@
 #include "compression_type.h"
 #include <cstdio>
+#include <cerrno>
+#include <cstring>
+#include <stdexcept>
+#include <iostream>
+#include <zip.h>
+
+CompressionType detectCompressionTypeFromBytes(const unsigned char* bytes, size_t read) {
+    if (read >= 4 && bytes[0] == 0x28 && bytes[1] == 0xB5 && bytes[2] == 0x2F && bytes[3] == 0xFD) {
+        return CompressionType::ZSTD;
+    }
+    if (read >= 4 && bytes[0] == 0x04 && bytes[1] == 0x22 && bytes[2] == 0x4D && bytes[3] == 0x18) {
+        return CompressionType::LZ4;
+    }
+    if (read >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b) {
+        return CompressionType::GZIP;
+    }
+    if (read >= 3 && bytes[0] == 'B' && bytes[1] == 'Z' && bytes[2] == 'h') {
+        return CompressionType::BZIP2;
+    }
+    if (read >= 6 && bytes[0] == 0xFD && bytes[1] == 0x37 && bytes[2] == 0x7A &&
+               bytes[3] == 0x58 && bytes[4] == 0x5A && bytes[5] == 0x00) {
+        return CompressionType::XZ;
+    }
+    if (read >= 4 && bytes[0] == 0x50 && bytes[1] == 0x4B &&
+               (bytes[2] == 0x03 || bytes[2] == 0x05 || bytes[2] == 0x07) &&
+               (bytes[3] == 0x04 || bytes[3] == 0x06 || bytes[3] == 0x08)) {
+        return CompressionType::ZIP;
+    }
+    return CompressionType::NONE;
+}
+
+static CompressionType fallbackByExtension(const std::string& filename) {
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".zst") == 0)
+        return CompressionType::ZSTD;
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".lz4") == 0)
+        return CompressionType::LZ4;
+    if (filename.size() >= 3 && filename.compare(filename.size() - 3, 3, ".gz") == 0)
+        return CompressionType::GZIP;
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".bgz") == 0)
+        return CompressionType::GZIP;
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".bz2") == 0)
+        return CompressionType::BZIP2;
+    if (filename.size() >= 3 && filename.compare(filename.size() - 3, 3, ".xz") == 0)
+        return CompressionType::XZ;
+    if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".zip") == 0)
+        return CompressionType::ZIP;
+    return CompressionType::NONE;
+}
 
 DetectionResult detectCompressionType(const std::string& filename) {
     FilePtr file(std::fopen(filename.c_str(), "rb"));
     if (!file) {
-        return {CompressionType::NONE, FilePtr(nullptr)};
+        throw std::runtime_error("Failed to open file '" + filename + "': " + std::strerror(errno));
     }
 
     unsigned char bytes[6] = {0};
     size_t read = std::fread(bytes, 1, sizeof(bytes), file.get());
 
-    CompressionType type = CompressionType::NONE;
-    if (read >= 4 && bytes[0] == 0x28 && bytes[1] == 0xB5 && bytes[2] == 0x2F && bytes[3] == 0xFD) {
-        type = CompressionType::ZSTD;
-    } else if (read >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b) {
-        type = CompressionType::GZIP;      // gzip or bgz
-    } else if (read >= 3 && bytes[0] == 'B' && bytes[1] == 'Z' && bytes[2] == 'h') {
-        type = CompressionType::BZIP2;     // bzip2
-    } else if (read >= 6 && bytes[0] == 0xFD && bytes[1] == 0x37 && bytes[2] == 0x7A &&
-               bytes[3] == 0x58 && bytes[4] == 0x5A && bytes[5] == 0x00) {
-        type = CompressionType::XZ;        // xz
-    } else if (read >= 4 && bytes[0] == 0x50 && bytes[1] == 0x4B &&
-               (bytes[2] == 0x03 || bytes[2] == 0x05 || bytes[2] == 0x07) &&
-               (bytes[3] == 0x04 || bytes[3] == 0x06 || bytes[3] == 0x08)) {
-        type = CompressionType::ZIP;       // zip
-    } else {
-        // Fallback based on file extension
-        if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".zst") == 0) {
-            type = CompressionType::ZSTD;
-        } else if (filename.size() >= 3 && filename.compare(filename.size() - 3, 3, ".gz") == 0) {
-            type = CompressionType::GZIP;
-        } else if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".bgz") == 0) {
-            type = CompressionType::GZIP;
-        } else if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".bz2") == 0) {
-            type = CompressionType::BZIP2;
-        } else if (filename.size() >= 3 && filename.compare(filename.size() - 3, 3, ".xz") == 0) {
-            type = CompressionType::XZ;
-        } else if (filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".zip") == 0) {
-            type = CompressionType::ZIP;
-        }
+    CompressionType type = detectCompressionTypeFromBytes(bytes, read);
+    if (type == CompressionType::NONE) {
+        type = fallbackByExtension(filename);
     }
 
     return {type, std::move(file)};
+}
+
+void listZipEntries(const std::string& filename) {
+    int error = 0;
+    zip_t* za = zip_open(filename.c_str(), ZIP_RDONLY, &error);
+    if (!za) {
+        throw std::runtime_error("Failed to open zip file '" + filename + "' (error " + std::to_string(error) + ")");
+    }
+    zip_int64_t numEntries = zip_get_num_entries(za, 0);
+    for (zip_int64_t i = 0; i < numEntries; ++i) {
+        const char* name = zip_get_name(za, static_cast<zip_uint64_t>(i), 0);
+        if (name) {
+            zip_stat_t st;
+            if (zip_stat_index(za, static_cast<zip_uint64_t>(i), 0, &st) == 0 && (st.valid & ZIP_STAT_SIZE)) {
+                std::cout << st.size << '\t' << name << '\n';
+            } else {
+                std::cout << "?\t" << name << '\n';
+            }
+        }
+    }
+    zip_close(za);
 }

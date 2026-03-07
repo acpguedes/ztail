@@ -31,9 +31,14 @@ public:
     void end_line();
 
     void print(size_t aggregationThreshold) const;
-    size_t memoryUsage() const;
+    [[nodiscard]] size_t memoryUsage() const;
 
 private:
+    void ensureStorage(size_t hint);
+    [[nodiscard]] size_t freeSpace() const;
+    void dropOldest();
+    void copyToRing(const char* src, size_t len);
+
     std::vector<char> data;             // underlying byte storage
     std::vector<Offset> offsets;        // ring of line start positions
     size_t capacity;                    // maximum number of lines

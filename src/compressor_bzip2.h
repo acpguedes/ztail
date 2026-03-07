@@ -12,11 +12,9 @@
 class CompressorBzip2 : public ICompressor {
 public:
     explicit CompressorBzip2(FilePtr&& file, const std::string& filename);
-    ~CompressorBzip2();
+    ~CompressorBzip2() noexcept;
 
-    // Reads the next chunk of decompressed data
-    // Returns true while data is available, false on EOF
-    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
+    [[nodiscard]] bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
 
 private:
     FilePtr file;

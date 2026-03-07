@@ -60,7 +60,8 @@ bool CompressorZstd::decompress(std::vector<char>& outBuffer, size_t& bytesDecom
         if (ZSTD_isError(ret)) {
             throw std::runtime_error("zstd error (" + std::to_string(static_cast<int>(ret)) + ") while decompressing '" + filename + "'");
         }
-        if (ret == 0 && in.pos == in.size) {
+        // ret == 0 means frame complete; only set eof if no more input data
+        if (ret == 0 && in.pos == in.size && feof(file.get())) {
             eof = true;
             break;
         }

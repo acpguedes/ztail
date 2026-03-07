@@ -11,11 +11,9 @@
 class CompressorZip : public ICompressor {
 public:
     explicit CompressorZip(FilePtr&& file, const std::string& filename, const std::string& entry = "");
-    ~CompressorZip();
+    ~CompressorZip() noexcept;
 
-    // Reads the next chunk of decompressed data
-    // Returns true while data is available, false on EOF
-    bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
+    [[nodiscard]] bool decompress(std::vector<char>& outBuffer, size_t& bytesDecompressed) override;
 
 private:
     std::unique_ptr<zip_t, decltype(&zip_close)> za;

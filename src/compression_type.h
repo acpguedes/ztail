@@ -2,6 +2,7 @@
 #define COMPRESSION_TYPE_H
 
 #include <string>
+#include <cstddef>
 #include "file_ptr.h"
 
 enum class CompressionType {
@@ -10,7 +11,8 @@ enum class CompressionType {
     BZIP2,
     XZ,
     ZIP,
-    ZSTD
+    ZSTD,
+    LZ4
 };
 
 struct DetectionResult {
@@ -18,7 +20,9 @@ struct DetectionResult {
     FilePtr file;
 };
 
-DetectionResult detectCompressionType(const std::string& filename);
+[[nodiscard]] DetectionResult detectCompressionType(const std::string& filename);
+[[nodiscard]] CompressionType detectCompressionTypeFromBytes(const unsigned char* bytes, size_t len);
 
+void listZipEntries(const std::string& filename);
 
 #endif // COMPRESSION_TYPE_H
