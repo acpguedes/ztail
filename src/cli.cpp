@@ -35,6 +35,9 @@ CompressionType parseFormat(const char* s) {
     if (strcmp(s, "xz") == 0) return CompressionType::XZ;
     if (strcmp(s, "zstd") == 0 || strcmp(s, "zst") == 0) return CompressionType::ZSTD;
     if (strcmp(s, "zip") == 0) return CompressionType::ZIP;
+#ifdef ZTAIL_HAS_TAR
+    if (strcmp(s, "tar") == 0 || strcmp(s, "tgz") == 0 || strcmp(s, "tbz2") == 0 || strcmp(s, "txz") == 0 || strcmp(s, "tzst") == 0) return CompressionType::TAR;
+#endif
 #ifdef ZTAIL_HAS_LZ4
     if (strcmp(s, "lz4") == 0) return CompressionType::LZ4;
 #endif
@@ -56,14 +59,23 @@ void CLI::usage(const char* progName) {
         << "      --zstd-window N : set max zstd window size in bytes (default = unlimited)\n"
         << "  -r, --read-buffer N : set read buffer size in bytes (default = 1048576)\n"
         << "  -e, --entry <name> : entry name inside zip archive\n"
-        << "      --list-entries  : list entries in zip archive and exit\n"
+        << "      --list-entries  : list entries in zip"
+#ifdef ZTAIL_HAS_TAR
+        << "/tar"
+#endif
+        << " archive and exit\n"
         << "  -f, --format <fmt> : force compression format (gzip|bzip2|xz|zstd|zip"
+#ifdef ZTAIL_HAS_TAR
+        << "|tar"
+#endif
 #ifdef ZTAIL_HAS_LZ4
         << "|lz4"
 #endif
         << "|plain)\n"
         << "      --print-aggregation-threshold N : threshold in bytes for aggregated output (default = 8388608)\n"
         << "      --no-threads   : disable producer/consumer threading\n"
+        << "      --quiet-headers : suppress file headers in multi-file mode\n"
+        << "      --always-headers: always print file headers, even for one file\n"
         << "  -V, --version  : display program version and exit\n"
         << "  -h, --help     : display this help and exit\n"
         << "If no file is provided, the program reads from stdin.\n"
@@ -89,6 +101,8 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
         {"format",        required_argument, nullptr, 'f'},
         {"print-aggregation-threshold", required_argument, nullptr, 1000},
         {"no-threads",    no_argument,       nullptr, 1002},
+        {"quiet-headers", no_argument,       nullptr, 1007},
+        {"always-headers", no_argument,      nullptr, 1008},
         {0, 0, 0, 0}
     };
 
@@ -130,9 +144,13 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
         case 1005:
             options.xzMemLimit = parsePositiveSize(optarg, "--xz-memlimit");
             break;
-        case 1004:
+        case 1004: {
             options.zstdWindowSize = parseNonNegativeSize(optarg, "--zstd-window");
+            if (options.zstdWindowSize != 0 && (options.zstdWindowSize & (options.zstdWindowSize - 1)) != 0) {
+                throw std::runtime_error("--zstd-window requires a power-of-two value (or 0 for default)");
+            }
             break;
+        }
         case 'r':
             options.readBufferSize = parsePositiveSize(optarg, "-r/--read-buffer");
             break;
@@ -153,6 +171,14 @@ CLIOptions CLI::parse(int argc, char* argv[]) {
             break;
         case 1006:
             options.listEntries = true;
+            break;
+        case 1007:
+            options.multiFileHeaders = false;
+            options.alwaysShowHeaders = false;
+            break;
+        case 1008:
+            options.alwaysShowHeaders = true;
+            options.multiFileHeaders = true;
             break;
         case '?':
         default:

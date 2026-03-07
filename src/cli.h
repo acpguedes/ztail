@@ -20,6 +20,8 @@ struct CLIOptions {
     bool useThreads = true; // Enable producer/consumer threads
     CompressionType forceFormat = CompressionType::NONE; // Force decompressor
     bool listEntries = false; // List zip entries and exit
+    bool multiFileHeaders = true; // Print file headers when processing multiple files
+    bool alwaysShowHeaders = false; // Print file headers even for a single file
 };
 
 class CLI {

@@ -58,3 +58,38 @@ TEST(CompressorZipTest, DecompressInvalidFile) {
 
     remove(filename.c_str());
 }
+
+
+TEST(CompressorZipTest, DecompressPatternEntry) {
+    const std::string filename = "test_pattern.zip";
+    const std::string content = "Pattern line\n";
+
+    int error = 0;
+    zip_t* za = zip_open(filename.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &error);
+    ASSERT_NE(za, nullptr);
+
+    zip_source_t* zs1 = zip_source_buffer(za, "ignored", 7, 0);
+    ASSERT_NE(zs1, nullptr);
+    ASSERT_GE(zip_file_add(za, "meta/readme.txt", zs1, ZIP_FL_OVERWRITE), 0);
+
+    zip_source_t* zs2 = zip_source_buffer(za, content.c_str(), content.size(), 0);
+    ASSERT_NE(zs2, nullptr);
+    ASSERT_GE(zip_file_add(za, "logs/app.log", zs2, ZIP_FL_OVERWRITE), 0);
+
+    ASSERT_EQ(zip_close(za), 0);
+
+    DetectionResult det = detectCompressionType(filename);
+    ASSERT_EQ(det.type, CompressionType::ZIP);
+
+    CompressorZip compressor(std::move(det.file), filename, "logs/*.log");
+    std::vector<char> buffer(1024);
+    size_t bytesDecompressed = 0;
+
+    std::string decompressed;
+    while (compressor.decompress(buffer, bytesDecompressed)) {
+        decompressed.append(buffer.data(), bytesDecompressed);
+    }
+
+    EXPECT_EQ(decompressed, content);
+    remove(filename.c_str());
+}

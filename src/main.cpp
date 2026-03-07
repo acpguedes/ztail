@@ -6,6 +6,9 @@
 #include "compressor_bzip2.h"
 #include "compressor_xz.h"
 #include "compressor_zstd.h"
+#ifdef ZTAIL_HAS_TAR
+#include "compressor_tar.h"
+#endif
 #ifdef ZTAIL_HAS_LZ4
 #include "compressor_lz4.h"
 #endif
@@ -15,13 +18,14 @@
 
 #include <iostream>
 #include <stdexcept>
-#include <cstdio>      // for fread
+#include <cstdio>
 #include <vector>
-#include <cstdlib>     // for EXIT_SUCCESS/EXIT_FAILURE
+#include <cstdlib>
 #include <fstream>
 #include <string>
 #include <functional>
 #include <unordered_map>
+#include <exception>
 #if ZTAIL_USE_THREADS
 #include <thread>
 #include <mutex>
@@ -30,6 +34,7 @@
 #if defined(__linux__)
 #include <fcntl.h>
 #endif
+#include <unistd.h>
 
 #ifndef ZTAIL_NO_MAIN
 namespace {
@@ -67,12 +72,40 @@ std::unordered_map<CompressionType, CompressorFactory> buildFactoryMap() {
     map[CompressionType::ZSTD] = [](FilePtr&& f, const std::string& name, const CLIOptions& opts) {
         return std::make_unique<CompressorZstd>(std::move(f), name, opts.zstdWindowSize);
     };
+#ifdef ZTAIL_HAS_TAR
+    map[CompressionType::TAR] = [](FilePtr&& f, const std::string& name, const CLIOptions& opts) {
+        return std::make_unique<CompressorTar>(std::move(f), name, opts.zipEntry);
+    };
+#endif
 #ifdef ZTAIL_HAS_LZ4
     map[CompressionType::LZ4] = [](FilePtr&& f, const std::string& name, const CLIOptions&) {
         return std::make_unique<CompressorLz4>(std::move(f), name);
     };
 #endif
     return map;
+}
+
+void streamToFd(int fd, const unsigned char* header, size_t headerSize, size_t chunkSize) {
+    auto writeAll = [fd](const char* data, size_t len) {
+        size_t written = 0;
+        while (written < len) {
+            ssize_t w = ::write(fd, data + written, len - written);
+            if (w <= 0) {
+                throw std::runtime_error("Failed writing data to streaming pipe");
+            }
+            written += static_cast<size_t>(w);
+        }
+    };
+
+    if (header && headerSize > 0) {
+        writeAll(reinterpret_cast<const char*>(header), headerSize);
+    }
+
+    std::vector<char> copyBuf(chunkSize);
+    size_t nr = 0;
+    while ((nr = std::fread(copyBuf.data(), 1, copyBuf.size(), stdin)) > 0) {
+        writeAll(copyBuf.data(), nr);
+    }
 }
 
 template <typename Reader>
@@ -86,8 +119,8 @@ void processStream(Reader reader, Parser& parser, CircularBuffer& cb,
         size_t value = 0;
         while (meminfo >> key >> value >> unit) {
             if (key == "MemAvailable:") {
-                size_t avail = value * 1024; // value in kB
-                return bs * 2 > avail / 2; // reserve at most half of available memory
+                size_t avail = value * 1024;
+                return bs * 2 > avail / 2;
             }
         }
 #endif
@@ -116,13 +149,12 @@ void processStream(Reader reader, Parser& parser, CircularBuffer& cb,
             while (true) {
                 {
                     std::unique_lock<std::mutex> lock(m);
-                    // Wait until the current buffer slot is consumed
                     cv.wait(lock, [&] { return !ready[idx]; });
                     if (!ready[0] && !ready[1]) {
                         ++idleCount;
                         if (idleCount >= 3 && currentSize > minSize) {
                             currentSize /= 2;
-                            for (auto &b : buffers) {
+                            for (auto& b : buffers) {
                                 std::vector<char>(currentSize).swap(b);
                             }
                             idleCount = 0;
@@ -130,7 +162,18 @@ void processStream(Reader reader, Parser& parser, CircularBuffer& cb,
                     } else {
                         idleCount = 0;
                     }
+
+                    if ((ready[0] || ready[1]) && currentSize < bufferSize) {
+                        size_t grown = std::min(bufferSize, currentSize * 2);
+                        if (grown != currentSize) {
+                            currentSize = grown;
+                            for (auto& b : buffers) {
+                                b.resize(currentSize);
+                            }
+                        }
+                    }
                 }
+
                 if (!reader(buffers[idx], n)) {
                     break;
                 }
@@ -160,7 +203,7 @@ void processStream(Reader reader, Parser& parser, CircularBuffer& cb,
                     size_t n = sizes[idx];
                     ready[idx] = false;
                     lock.unlock();
-                    cv.notify_one(); // wake producer waiting on this slot
+                    cv.notify_one();
                     parser.parse(buffers[idx].data(), n);
                     idx ^= 1;
                 } else if (finished) {
@@ -195,6 +238,7 @@ void processStream(Reader reader, Parser& parser, CircularBuffer& cb,
 }
 
 } // namespace
+
 int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
     std::cout.tie(nullptr);
@@ -210,19 +254,13 @@ int main(int argc, char* argv[]) {
         if (!options.filenames.empty()) {
             for (size_t fi = 0; fi < options.filenames.size(); ++fi) {
                 const auto& filename = options.filenames[fi];
-                if (multiFile) {
+                if ((multiFile && options.multiFileHeaders) || options.alwaysShowHeaders) {
                     if (fi > 0) std::cout << '\n';
                     std::cout << "==> " << filename << " <==" << '\n';
                 }
 
                 CircularBuffer cb(options.n, options.lineCapacity, options.bytesBudget);
                 Parser parser(cb, options.lineCapacity);
-
-                // List zip entries mode
-                if (options.listEntries) {
-                    listZipEntries(filename);
-                    continue;
-                }
 
                 CompressionType ctype;
                 FilePtr file(nullptr);
@@ -239,15 +277,29 @@ int main(int argc, char* argv[]) {
                     file = std::move(det.file);
                 }
 
+
+                if (options.listEntries) {
+                    if (ctype == CompressionType::ZIP) {
+                        listZipEntries(filename);
+#ifdef ZTAIL_HAS_TAR
+                    } else if (ctype == CompressionType::TAR) {
+                        listTarEntries(filename);
+                    } else {
+#else
+                    } else {
+#endif
+                        throw std::runtime_error("--list-entries is only supported for zip/tar inputs");
+                    }
+                    continue;
+                }
+
                 auto it = factories.find(ctype);
                 if (it != factories.end()) {
                     adviseSequential(file.get());
                     auto comp = it->second(std::move(file), filename, options);
-                    processStream([
-                        &](std::vector<char>& buf, size_t& n) {
-                            return comp->decompress(buf, n);
-                        },
-                        parser, cb, options.readBufferSize, options.printAggregationThreshold, options.useThreads);
+                    processStream([&](std::vector<char>& buf, size_t& n) {
+                        return comp->decompress(buf, n);
+                    }, parser, cb, options.readBufferSize, options.printAggregationThreshold, options.useThreads);
                 } else {
                     file.reset();
                     tailPlainFile(filename, parser, options.n, options.readBufferSize);
@@ -255,7 +307,6 @@ int main(int argc, char* argv[]) {
                 }
             }
         } else {
-            // Stdin: detect compression from first bytes
             CircularBuffer cb(options.n, options.lineCapacity, options.bytesBudget);
             Parser parser(cb, options.lineCapacity);
 
@@ -268,22 +319,53 @@ int main(int argc, char* argv[]) {
             }
 
             if (stdinType != CompressionType::NONE) {
-                // Write header bytes to a temp file, then stream stdin through it
-                char tmpname[] = "/tmp/ztail_stdin_XXXXXX";
-                int tmpfd = mkstemp(tmpname);
-                if (tmpfd < 0) {
+#if ZTAIL_USE_THREADS
+                int fds[2];
+                if (pipe(fds) != 0) {
+                    throw std::runtime_error("Failed to create streaming pipe for stdin");
+                }
+
+                std::exception_ptr writerException = nullptr;
+                std::thread writer([&]() {
+                    try {
+                        ::close(fds[0]);
+                        streamToFd(fds[1], header, headerRead, options.readBufferSize);
+                    } catch (...) {
+                        writerException = std::current_exception();
+                    }
+                    ::close(fds[1]);
+                });
+
+                FILE* readFile = fdopen(fds[0], "rb");
+                if (!readFile) {
+                    ::close(fds[0]);
+                    ::close(fds[1]);
+                    writer.join();
+                    throw std::runtime_error("Failed to open streaming reader for stdin");
+                }
+
+                FilePtr fp(readFile);
+                auto it = factories.find(stdinType);
+                if (it != factories.end()) {
+                    auto comp = it->second(std::move(fp), "<stdin>", options);
+                    processStream([&](std::vector<char>& buf, size_t& n) {
+                        return comp->decompress(buf, n);
+                    }, parser, cb, options.readBufferSize, options.printAggregationThreshold, options.useThreads);
+                }
+
+                writer.join();
+                if (writerException) {
+                    std::rethrow_exception(writerException);
+                }
+#else
+                // Fallback when built without threads: stage stdin into an anonymous temp file.
+                FILE* tmpf = std::tmpfile();
+                if (!tmpf) {
                     throw std::runtime_error("Failed to create temporary file for stdin");
                 }
-                FILE* tmpf = fdopen(tmpfd, "w+b");
-                if (!tmpf) {
-                    close(tmpfd);
-                    unlink(tmpname);
-                    throw std::runtime_error("Failed to open temporary file for stdin");
-                }
                 std::fwrite(header, 1, headerRead, tmpf);
-                // Copy remaining stdin
                 std::vector<char> copyBuf(options.readBufferSize);
-                size_t nr;
+                size_t nr = 0;
                 while ((nr = std::fread(copyBuf.data(), 1, copyBuf.size(), stdin)) > 0) {
                     std::fwrite(copyBuf.data(), 1, nr, tmpf);
                 }
@@ -291,17 +373,15 @@ int main(int argc, char* argv[]) {
                 std::fseek(tmpf, 0, SEEK_SET);
 
                 FilePtr fp(tmpf);
-                std::string tmpFilename(tmpname);
                 auto it = factories.find(stdinType);
                 if (it != factories.end()) {
-                    auto comp = it->second(std::move(fp), tmpFilename, options);
+                    auto comp = it->second(std::move(fp), "<stdin>", options);
                     processStream([&](std::vector<char>& buf, size_t& n) {
                         return comp->decompress(buf, n);
                     }, parser, cb, options.readBufferSize, options.printAggregationThreshold, options.useThreads);
                 }
-                std::remove(tmpname);
+#endif
             } else {
-                // Plain text stdin — feed header bytes first, then stream
                 if (headerRead > 0) {
                     parser.parse(reinterpret_cast<const char*>(header), headerRead);
                 }

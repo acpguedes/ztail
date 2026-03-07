@@ -12,7 +12,8 @@ enum class CompressionType {
     XZ,
     ZIP,
     ZSTD,
-    LZ4
+    LZ4,
+    TAR
 };
 
 struct DetectionResult {
@@ -24,5 +25,6 @@ struct DetectionResult {
 [[nodiscard]] CompressionType detectCompressionTypeFromBytes(const unsigned char* bytes, size_t len);
 
 void listZipEntries(const std::string& filename);
+void listTarEntries(const std::string& filename);
 
 #endif // COMPRESSION_TYPE_H

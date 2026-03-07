@@ -1,11 +1,11 @@
 # ztail
 <img width="1024" height="1024" alt="ChatGPT Image 22 de ago  de 2025, 06_52_55" src="https://github.com/user-attachments/assets/a7459c72-132f-43d9-80ad-9f6e8ca02c4f" />
 
-**ztail** is an efficient command-line tool to display the last N lines of compressed `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, and `.zst` files. Designed for high performance, **ztail** is ideal for working with large compressed text files.
+**ztail** is an efficient command-line tool to display the last N lines of compressed `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, `.zst`, optional tar-family archives (`.tar`, `.tar.gz`, and related variants, when built with libarchive), and optional `.lz4` files. Designed for high performance, **ztail** is ideal for working with large compressed text files.
 
 ## 🛠️ **Features**
 
-- **Supports `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, and `.zst` Files:** Decompresses and processes these compressed file formats efficiently.
+- **Supports `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, `.zst`, optional tar archives (`.tar`, `.tar.gz`, `.tar.bz2`, `.tar.xz`, `.tar.zst`) and optional `.lz4`:** Decompresses and processes these compressed file formats efficiently.
 - **Automatic Detection:** Compression type is identified from file contents even when the extension is missing or wrong.
 - **High Performance:** Optimized for large files, avoiding unnecessary full decompressions.
 - **Intuitive Command-Line Interface:** Simple usage with flexible options.
@@ -23,11 +23,13 @@
  - **liblzma Library:** For handling `.xz` files.
  - **libzstd Library:** For handling `.zst` files.
  - **libzip Library:** For handling `.zip` files.
+ - **liblz4 Library (optional):** For handling `.lz4` files.
+ - **libarchive Library (optional):** For handling tar-based archives (`.tar`, `.tar.gz`, etc.).
 
 On Ubuntu/Debian the required packages can typically be installed with:
 
 ```bash
-sudo apt install zlib1g-dev libbz2-dev liblzma-dev libzstd-dev libzip-dev
+sudo apt install zlib1g-dev libbz2-dev liblzma-dev libzstd-dev libzip-dev libarchive-dev liblz4-dev
 ```
 
 Library names may vary on other operating systems.
@@ -54,8 +56,8 @@ Library names may vary on other operating systems.
    cmake .. -DBUILD_TESTING=ON
    ```
 
-   By default, **ztail** compiles with `-march=x86-64-v3`, which targets most modern
-   x86-64 CPUs for a good balance of performance and portability.
+   By default, **ztail** compiles with `-march=x86-64-v2`, which offers a good balance
+   of performance and compatibility for most x86-64 systems.
 
    - For maximum compatibility with older processors, enable the `BUILD_PORTABLE`
      option:
@@ -73,9 +75,9 @@ Library names may vary on other operating systems.
 
    Using `-march=native` can yield additional speedups by exploiting all CPU features
    available on the host, but the resulting binary may not run on systems with
-   different processors. `-march=x86-64-v3` remains compatible with most modern
-   hardware, while `BUILD_PORTABLE` trades performance for compatibility with any
-   x86-64 CPU.
+   different processors. `-march=x86-64-v2` remains broadly compatible while still
+   allowing modern instruction usage, and `BUILD_PORTABLE` trades performance for
+   maximum compatibility.
 
    On systems without thread support, disable the producer/consumer threads with:
 
@@ -102,7 +104,7 @@ Library names may vary on other operating systems.
 
 ## 🚀 **Usage**
 
-### **Display the Last N Lines of `.gz`, `.bgz`, `.bz2`, `.xz`, `.zip`, or `.zst` Files**
+### **Display the Last N Lines of compressed and tar-based files**
 
 ```bash
 ./ztail -n 2 file.gz
@@ -112,7 +114,13 @@ Library names may vary on other operating systems.
 ./ztail -n 2 file.xz
 ./ztail -n 2 file.zip
 ./ztail -n 2 file.zst
+./ztail -n 2 file.tar
+./ztail -n 2 file.tar.gz
+./ztail -n 2 -e "logs/*.txt" file.tar.gz
 ./ztail -e entry.txt archive.zip
+./ztail -e "logs/*.txt" archive.zip
+./ztail --quiet-headers file1.gz file2.gz
+./ztail --always-headers file.gz
 ./ztail --version
 ./ztail --help
 ```
@@ -124,8 +132,11 @@ Library names may vary on other operating systems.
 - **`--zstd-window N`**: Set maximum zstd window size in bytes (default = unlimited).
 - **`-r N`, `--read-buffer N`**: Set read buffer size in bytes (default = 1048576).
 - **`--no-threads`**: Disable producer/consumer threads.
-- **`file.gz`, `file.bgz`, `file.bz2`, `file.xz`, `file.zip`, or `file.zst`**: Name of the compressed file. The extension may be omitted because compression type is detected automatically.
-- **`-e <name>`, `--entry <name>`**: When reading a `.zip` file, select an entry inside the archive.
+- **`file.gz`, `file.bgz`, `file.bz2`, `file.xz`, `file.zip`, `file.zst`, `file.tar`, `file.tar.gz`, ...**: Name of the compressed/archive file. Compression type is detected automatically when possible; tar-compressed combos are resolved by extension.
+- **`-e <name>`, `--entry <name>`**: When reading a `.zip` or `.tar*` file, select an entry inside the archive. Supports shell-style patterns (e.g., `logs/*.txt`).
+- **`--quiet-headers`**: Suppress file header lines when reading multiple files.
+- **`--always-headers`**: Always print file header lines (even for one file).
+- **`--list-entries`**: List entries in `.zip` archives and, when tar support is enabled, `.tar*` archives.
 - If no file is provided, **ztail** reads from standard input.
 - **`-V`, `--version`**: Display program version and exit.
 - **`-h`, `--help`**: Display usage information and exit.

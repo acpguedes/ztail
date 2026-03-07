@@ -1,6 +1,7 @@
 #include "compressor_zip.h"
 #include <stdexcept>
 #include <unistd.h>
+#include <fnmatch.h>
 
 CompressorZip::CompressorZip(FilePtr&& file, const std::string& filename, const std::string& entryName)
     : za(nullptr, &zip_close), zf(nullptr, &zip_fclose), entry(entryName), eof(false), filename(filename)
@@ -24,7 +25,28 @@ CompressorZip::CompressorZip(FilePtr&& file, const std::string& filename, const 
     }
 
     if (!entry.empty()) {
-        zf.reset(zip_fopen(za.get(), entry.c_str(), 0));
+        const bool pattern = entry.find_first_of("*?[") != std::string::npos;
+        if (pattern) {
+            zip_uint64_t matchedIndex = static_cast<zip_uint64_t>(-1);
+            std::string matchedName;
+            for (zip_uint64_t i = 0; i < static_cast<zip_uint64_t>(numEntries); ++i) {
+                const char* name = zip_get_name(za.get(), i, 0);
+                if (name && fnmatch(entry.c_str(), name, 0) == 0) {
+                    matchedIndex = i;
+                    matchedName = name;
+                    break;
+                }
+            }
+            if (matchedIndex == static_cast<zip_uint64_t>(-1)) {
+                za.reset();
+                throw std::runtime_error("libzip error (0) no entry matching pattern '" + entry + "' in '" + filename + "'");
+            }
+            zf.reset(zip_fopen_index(za.get(), matchedIndex, 0));
+            entry = matchedName;
+        } else {
+            zf.reset(zip_fopen(za.get(), entry.c_str(), 0));
+        }
+
         if (!zf) {
             int err = zip_error_code_zip(zip_get_error(za.get()));
             za.reset();

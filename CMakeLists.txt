@@ -29,6 +29,7 @@ option(BUILD_PORTABLE "Build without CPU-specific optimizations" OFF)
 option(USE_NATIVE "Build with -march=native" OFF)
 option(USE_CHAR_RING_BUFFER "Use CharRingBuffer instead of std::string CircularBuffer" ON)
 option(ZTAIL_USE_THREADS "Enable producer/consumer threading" ON)
+option(ZTAIL_ENABLE_TAR "Enable TAR support via libarchive" ON)
 
 # Display selected buffer backend
 if(USE_CHAR_RING_BUFFER)
@@ -79,6 +80,9 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED libzip)
 pkg_check_modules(LIBLZMA REQUIRED liblzma)
 pkg_check_modules(LIBZSTD REQUIRED libzstd)
+if(ZTAIL_ENABLE_TAR)
+    pkg_check_modules(LIBARCHIVE libarchive)
+endif()
 if(ZTAIL_USE_THREADS)
     find_package(Threads REQUIRED)
 endif()
@@ -106,6 +110,13 @@ if(LIBZSTD_FOUND)
 else()
     message(FATAL_ERROR "LibZSTD not found!")
 endif()
+if(ZTAIL_ENABLE_TAR AND LIBARCHIVE_FOUND)
+    message(STATUS "LibArchive found: ${LIBARCHIVE_INCLUDE_DIRS}")
+elseif(ZTAIL_ENABLE_TAR)
+    message(STATUS "LibArchive not found — TAR support disabled (install libarchive-dev to enable)")
+else()
+    message(STATUS "TAR support explicitly disabled (ZTAIL_ENABLE_TAR=OFF)")
+endif()
 
 # Include Directories
 include_directories(
@@ -118,6 +129,9 @@ include_directories(
 )
 if(LIBLZ4_FOUND)
     include_directories(${LIBLZ4_INCLUDE_DIRS})
+endif()
+if(ZTAIL_ENABLE_TAR AND LIBARCHIVE_FOUND)
+    include_directories(${LIBARCHIVE_INCLUDE_DIRS})
 endif()
 
 # Enable testing infrastructure
@@ -140,6 +154,9 @@ set(ZTAIL_LIB_SOURCES
 if(LIBLZ4_FOUND)
     list(APPEND ZTAIL_LIB_SOURCES src/compressor_lz4.cpp)
 endif()
+if(ZTAIL_ENABLE_TAR AND LIBARCHIVE_FOUND)
+    list(APPEND ZTAIL_LIB_SOURCES src/compressor_tar.cpp)
+endif()
 
 # Build library with core functionality
 add_library(ztail_lib ${ZTAIL_LIB_SOURCES})
@@ -154,6 +171,10 @@ target_link_libraries(ztail_lib
 if(LIBLZ4_FOUND)
     target_link_libraries(ztail_lib PUBLIC ${LIBLZ4_LIBRARIES})
     target_compile_definitions(ztail_lib PUBLIC ZTAIL_HAS_LZ4)
+endif()
+if(ZTAIL_ENABLE_TAR AND LIBARCHIVE_FOUND)
+    target_link_libraries(ztail_lib PUBLIC ${LIBARCHIVE_LIBRARIES})
+    target_compile_definitions(ztail_lib PUBLIC ZTAIL_HAS_TAR)
 endif()
 target_include_directories(ztail_lib PUBLIC src)
 if(USE_CHAR_RING_BUFFER)
@@ -191,8 +212,12 @@ if(BUILD_TESTING)
         tests/test_compressor_zstd.cpp
         tests/test_parser.cpp
         tests/test_detection.cpp
+        tests/test_cli.cpp
         src/main.cpp
     )
+    if(ZTAIL_ENABLE_TAR AND LIBARCHIVE_FOUND)
+        target_sources(ztail_tests PRIVATE tests/test_compressor_tar.cpp)
+    endif()
     target_link_libraries(ztail_tests PRIVATE gtest_main ztail_lib)
     if(ZTAIL_USE_THREADS)
         target_link_libraries(ztail_tests PRIVATE Threads::Threads)
